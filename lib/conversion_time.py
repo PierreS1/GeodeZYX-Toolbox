@@ -666,7 +666,7 @@ def dt2gpstime(dtin,dayinweek=True):
         Is a list of tuple if the input is an iterable
     """
     
-    if cnv_gen.is_iterable(dt):
+    if cnv_gen.is_iterable(dtin):
         return [dt2gpstime(e) for e in dtin]
         
     else:

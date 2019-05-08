@@ -328,11 +328,15 @@ class TimeSeriePoint:
     def __repr__(self):
         if self.pts == []:
             raise Exception('TS is empty ...')
-
+        
         start = self.startdate()
         end = self.enddate()
-        return '{} {} {} {} {}'.format(self.stat,self.nbpts,'points',start,end)
-        return None
+        nbday = int((end - start).days + 1.)
+        
+        ratio = self.nbpts * 100. / nbday
+        
+        return '{} {} {} {} {} {} {} {:5.2f}{}'.format(self.stat,self.nbpts,'points',
+                start,end,nbday,"nb days", ratio,"%")
 
     def __getitem__(self,i):
         return self.pts[i]
@@ -1735,6 +1739,29 @@ def read_epos_sta_coords_multi(filein_list,return_dict = True):
         return ts_list
     
     
+def read_epos_slv_times(p):
+    L = genefun.extract_text_between_elements_2(p,"\+sum_times/estimates","\-sum_times/estimates")
+    
+    
+    Lgood = []
+    for l in L[1:-1]:
+        if "EPOCHE" in l:
+            cur_epoc_line = l
+            cur_epoc_f = cur_epoc_line.split()
+            cur_epoc   = geok.MJD2dt(int(cur_epoc_f[1])) +  dt.timedelta(seconds=int(86400*float(cur_epoc_f[2])))
+            
+        if re.match("^   [0-9]{4}.*",l):
+            Lgood.append([cur_epoc] + [float(e) for e in l.split()])
+            
+            
+    DF = pd.DataFrame(Lgood,columns=["epoch","stat","offset","offset_sig"])
+    
+    DF["stat"] = DF["stat"].astype('int')
+    
+    return DF
+
+
+    
 def write_epos_sta_coords(DF_in,file_out):
     
     DF_work = DF_in.sort_values(["site","MJD_start"])
@@ -1790,11 +1817,15 @@ def write_epos_sta_coords(DF_in,file_out):
     return final_str
 
 
-def prn_int_2_prn_str(prn_int):
+def prn_int_2_prn_str(prn_int,full_out=False):
     """
     for read_combi_sum_full
+    
+    if full_out : return e.g. "G04","G",4
     """
     const = "X"
+
+    prn_int = int(prn_int)
     
     prn_int_out = prn_int
     
@@ -1816,10 +1847,13 @@ def prn_int_2_prn_str(prn_int):
     
     prn_str = const + str(prn_int_out).zfill(2)
     
-    return prn_str
+    if not full_out:
+        return prn_str
+    else:
+        return prn_str , const , prn_int_out
 
 def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
-                        convert_prn_int_2_str=True):
+                        set_PRN_as_index=True):
     Vals_stk = []
 
     for l in open(sum_full_file):
@@ -1874,7 +1908,8 @@ def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
     DF.date_dt  = date_dt
     DF.date_gps = genefun.join_improved("",geok.dt2gpstime(date_dt))
     
-    DF.set_index("PRN_str",inplace=True)
+    if set_PRN_as_index:
+        DF.set_index("PRN_str",inplace=True)
     
     return DF
 
@@ -1999,6 +2034,25 @@ def read_combi_clk_rms_full_table(path_in):
     
     return DF
 
+
+def read_combi_REPORT(Path_list):
+    STK = []
+    for p in Path_list:
+        F = open(p)
+        for l in F:
+            f = l.split()
+            if "epoch" in l:
+                epoch = geok.gpstime2dt(int(f[2]),int(f[3]))
+            if "orb_flag_x" in l:
+                prn_str , const , prn_int = prn_int_2_prn_str((f[2]),True)
+                STK.append((epoch,prn_str,const , prn_int,"all"))
+            if "orb_excl_sat" in l:
+                prn_str , const , prn_int = prn_int_2_prn_str((f[3]),True)
+                STK.append((epoch,prn_str,const , prn_int,f[2]))    
+                
+    DF = pd.DataFrame(STK,columns=("epoch","PRN_str","CONST","PRN","AC"))
+
+    return DF
 
 
 def read_gins(filein,kineorstatic='kine',flh_in_rad=True,
@@ -2815,43 +2869,72 @@ def read_jpl_timeseries_solo(latlonrad_files_list):
 
     return tsout
 
-def read_nevada(filein):
+def read_nevada(filein,input_coords="enu"):
+    """
+    input_coords="enu" or "xyz"
+    """
 
     tsout = TimeSeriePoint()
 
     envfile = open(filein)
 
-    for l in envfile:
-                
-        f = l.split()
+    if input_coords=="enu":
+        for l in envfile:
+            f = l.split()
+    
+            if "site YYMMMDD" in l:
+                continue
+            if len(l) == 0:
+                continue
+    
+            stat = f[0]
+    
+            T = geok.year_decimal2dt(float(f[2]))
+    
+            N = float(f[10])
+            E = float(f[8])
+            U = float(f[12])
+    
+            sN = float(f[15])
+            sE = float(f[14])
+            sU = float(f[16])
+    
+            point = Point(E,N,U,T,'ENU',sE,sN,sU)
+    
+            #tsout.refENU = Point()
+    
+            tsout.boolENU = True
+            tsout.add_point(point)
 
-        if "site YYMMMDD" in l:
-            continue
+
+    if input_coords=="xyz":
+        for l in envfile:
+            f = l.split()
+    
+            if "site YYMMMDD" in l:
+                continue
+            if len(l) == 0:
+                continue
+    
+            stat = f[0]
+    
+            T = geok.year_decimal2dt(float(f[2]))
+    
+            X = float(f[3])
+            Y = float(f[4])
+            Z = float(f[5])
+    
+            sX = float(f[6])
+            sY = float(f[7])
+            sZ = float(f[8])
+    
+            point = Point(X,Y,Z,T,'XYZ',sX,sY,sZ)
+
+            point.anex['Rxy'] = float(f[9])
+            point.anex['Rxz'] = float(f[10])
+            point.anex['Ryz'] = float(f[11])
         
-        if len(l) == 0:
-            continue
-
-        if len(l) == 0:
-            continue
-
-        stat = f[0]
-
-        T = geok.year_decimal2dt(float(f[2]))
-
-        N = float(f[10])
-        E = float(f[8])
-        U = float(f[12])
-
-        sN = float(f[15])
-        sE = float(f[14])
-        sU = float(f[16])
-
-        point = Point(E,N,U,T,'ENU',sE,sN,sU)
-
-        #tsout.refENU = Point()
-
-        tsout.boolENU = True
-        tsout.add_point(point)
+            tsout.add_point(point)    
 
     tsout.stat = stat
 
@@ -6316,7 +6399,7 @@ def export_ts_figure_pdf(fig,export_path,filename,close=False):
     return None
 
 def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
-                   plot_B = False):
+                   plot_B = False,close_fig_after_export=True):
     """ Very beta ...
         to be implemented : merge w/ the export_figure_pdf fct """
     # plot A avec les barres de sigma
@@ -6339,7 +6422,8 @@ def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
         f.savefig(export_file,
                   papertype='a4',format=typ)
         print("INFO : plot exported in " , export_file)
-    plt.close(f)
+    if close_fig_after_export:
+        plt.close(f)
 
     # plot B avec une droite de regression
     if plot_B:
@@ -6359,7 +6443,8 @@ def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
             f.savefig(export_file,
                       papertype='a4',format=typ)
         print("INFO : plot exported in " , export_file)
-        plt.close(f)
+        if close_fig_after_export:            
+            plt.close(f)
     return None
 
 

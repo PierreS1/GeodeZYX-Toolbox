@@ -50,6 +50,7 @@ import scipy
 from natsort import natsorted, ns
 import fnmatch
 import itertools
+import pandas as pd
 
 sys.dont_write_bytecode = True
 
@@ -1200,7 +1201,10 @@ def extract_text_between_elements_2(file_path , elt_start , elt_end,
     https://docs.python.org/2/library/stringio.html
     """
     
-    F = open(file_path,"r")
+    try:
+        F = open(file_path,"r")
+    except:
+        F = file_path
     
     out_lines_list = []
     
@@ -1465,7 +1469,30 @@ def pandas_column_rename_dic(*inpnames):
     """
     return renamedic_fast_4_pandas(*inpnames)
 
+def pandas_DF_2_tuple_serie(DFin,columns_name_list,reset_index_first=False):
+    """
+    This function is made to solve the multiple columns selection 
+    problem
+    the idea is :
+        S1 = pandas_DF_2_tuple_serie(DF1 , columns_name_list)
+        S2 = pandas_DF_2_tuple_serie(DF2 , columns_name_list)
+        BOOL = S1.isin(S2)
+        DF1[BOOL]
+        
+    Source :
+        https://stackoverflow.com/questions/53432043/pandas-dataframe-selection-of-multiple-elements-in-several-columns
+    """
+    if reset_index_first:
+        DF = DFin.reset_index(level=0, inplace=False)
+    else:
+        DF = DFin
+        
+    Sout = pd.Series(list(map(tuple, DF[columns_name_list].values.tolist())),index=DF.index)
+    return Sout
+    
 
+            
+            
 def dicts_merge(*dict_args):
     '''
     Given any number of dicts, shallow copy and merge into a new dict,

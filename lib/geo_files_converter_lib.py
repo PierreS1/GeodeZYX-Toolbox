@@ -2004,7 +2004,8 @@ def sinex_DataFrame(read_sinex_result):
 
 
 def read_sinex_versatile(sinex_path_in , id_block,
-                         convert_date_2_dt = True):
+                         convert_date_2_dt = True,
+                         use_last_header_line = True):
     """
     Read a block from a SINEX and return the data as a DataFrame
 
@@ -2018,6 +2019,10 @@ def read_sinex_versatile(sinex_path_in , id_block,
         
     convert_date_2_dt : bool
         Try to convert a SINEX formated date as a python datetime
+        
+    use_last_header_line : bool
+        If the block header contains several lines, the last one will be used 
+        as column names (If False, the first line is used)
                 
     Returns
     -------
@@ -2033,24 +2038,42 @@ def read_sinex_versatile(sinex_path_in , id_block,
                                                          id_block_end)
     Lines_list = Lines_list[1:-1]
     
+    if not Lines_list:
+        print("ERR : read_sinex_versatile : no block found, ",id_block)
+    
     #### Remove commented lines
-    Lines_list_OK = []
+    Lines_list_header = []
+    Lines_list_OK     = []
+    header_lines = True
     for i_l , l in enumerate(Lines_list):
-        if l[0] == " " or  i_l == 0:
+        if not l[0] in (" ","\n") and header_lines:
+            Lines_list_header.append(l)
+        if l[0] == " ":
+            header_lines = False
             Lines_list_OK.append(l)
-            
+
     Lines_str  = "".join(Lines_list_OK)
+                            
+    if len(Lines_list_header) > 0:
+        ### define the header
+        if use_last_header_line:
+            header_line = Lines_list_header[-1]
+        else:   
+            header_line = Lines_list_header[0]
+
+        Header_split = header_line.split()
+        Fields_size = [len(e)+1 for e in Header_split]
     
-    ### define the header
-    header_line = Lines_list[0]
-    Header_split = header_line.split()
-    Fields_size = [len(e)+1 for e in Header_split]
-    
-    ### Read the file
-    DF = pandas.read_fwf(StringIO(Lines_str),width=Fields_size)
-    
-    ### Rename the 1st column (remove the comment marker)
-    DF.rename(columns={DF.columns[0]:DF.columns[0][1:]}, inplace=True)
+        ### Read the file
+        DF = pandas.read_fwf(StringIO(Lines_str),width=Fields_size)
+        
+        ### Rename the 1st column (remove the comment marker)
+        DF.rename(columns={DF.columns[0]:DF.columns[0][1:]}, inplace=True)
+
+    else: # no header in the SINEX
+        DF = pandas.read_csv(StringIO(Lines_str),header=-1 , delim_whitespace=True)
+        DF = pandas.read_csv(StringIO(Lines_str),header=-1 , delim_whitespace=True)
+
     
     for col in DF.columns:
         if convert_date_2_dt and re.match("[0-9]{2}:[0-9]{3}:[0-9]{5}",str(DF[col][0])):
