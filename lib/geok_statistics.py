@@ -263,10 +263,35 @@ def movingaverage_ter(data, window_width):
     
 def sinusoide(T,A,omega,phi=0):
     """
+    Determine value for a sinusoid
+
+    Parameters
+    ----------
+    T : numpy.array
+        The time range (X axis)
+
+    omega : float
+        ω = 2πf, angular frequency, the rate of change of the function 
+        argument in units of radians per second
+        
+    phi : float
+         specifies (in radians) where in its cycle the oscillation is at t = 0
+                
+    Returns
+    -------
+    Y : numpy.array
+        Sinusoid values
+        
+    Note
+    ----
     amplitude de la grandeur, appelée aussi valeur de crête, dans l'unité de la grandeur mesurée
+    
     omega : pulsation de la grandeur en rad⋅s-1
+    
     phi : phase instantanée en rad
+    
     phi : phase à l'origine en rad (souvent fixée par l'expérimentateur)
+    
     """
     return A * np.sin(omega * T + phi)
 
@@ -770,7 +795,7 @@ def mad(data,mode='median'):
     return MAD
 
 
-def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
+def outlier_mad(data,threshold=3.5,verbose=False,convert_to_np_array=True,
                 mad_mode = 'median' ):
     
     """    
@@ -784,7 +809,7 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
     data : list or numpy.array
         Values
 
-    seuil : float
+    threshold : float
         MAD threshold        
         
     verbose : bool
@@ -834,8 +859,8 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
 
     diff = data - med
     MZS = 0.6745 * np.abs(diff) / MAD
-    MZS[np.isnan(MZS)] = seuil * 10
-    boolbad = MZS < seuil
+    MZS[np.isnan(MZS)] = threshold * 10
+    boolbad = MZS < threshold
     dataout = data[boolbad]
     nbout = float(sum(boolbad))
     ratio = (nbinp-nbout)/nbinp
@@ -843,15 +868,15 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
         print("ratio d'elimination : %i / %i, %f p.c." %(nbinp-nbout,nbinp,ratio * 100))
     return dataout , boolbad
 
-def outiler_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
+def outiler_mad(data,threshold=3.5,verbose=False,convert_to_np_array=True,
                 mad_mode = 'median' ):
     """
     wrapper of outlier_mad, maintened for legacy with a typo
     """
-    return outlier_mad(data,seuil , verbose , convert_to_np_array , mad_mode )
+    return outlier_mad(data,threshold , verbose , convert_to_np_array , mad_mode )
 
 
-def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
+def outlier_mad_binom(Y,X,threshold=3.5,verbose=False,detrend_first=False,
                       return_booleans = False):   
     """    
     clean the outlier of Y usind MAD approach 
@@ -867,7 +892,7 @@ def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
     X : list or numpy.array
         X Values so as X => Y(X)
 
-    seuil : float
+    threshold : float
         MAD threshold        
         
     verbose : bool
@@ -890,7 +915,7 @@ def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
     else:
         _ , Ywork = np.array(X) , np.array(Y)
         
-    _ , bb = outiler_mad(Ywork,seuil,verbose)
+    _ , bb = outiler_mad(Ywork,threshold,verbose)
     
     Xclean = np.array(X)[bb]    
     Yclean = np.array(Y)[bb]
@@ -900,7 +925,7 @@ def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
     else:
         return Yclean , Xclean , bb
 
-def outlier_mad_binom_legacy(X,Y,seuil=3.5,verbose=False,detrend_first=False,
+def outlier_mad_binom_legacy(X,Y,threshold=3.5,verbose=False,detrend_first=False,
                       return_booleans = False):
     """
     clean the outlier of X and clean the corresponding values in Y
@@ -913,7 +938,7 @@ def outlier_mad_binom_legacy(X,Y,seuil=3.5,verbose=False,detrend_first=False,
     else:
         Xwork , _ = np.array(X) , np.array(Y)
         
-    _ , bb = outiler_mad(Xwork,seuil,verbose)
+    _ , bb = outiler_mad(Xwork,threshold,verbose)
     
     Xclean = np.array(X)[bb]    
     Yclean = np.array(Y)[bb]
@@ -1039,11 +1064,11 @@ def outlier_above_below(X , threshold_values ,
         ref_val = reference
         
     if theshold_relative_value in ("reference" , None):
-        relativ_val = reference
+        relativ_val = ref_val
     elif callable(theshold_relative_value):
         relativ_val = theshold_relative_value(X)
     else:
-        relativ_val = reference
+        relativ_val = ref_val
         
     if theshold_absolute:
         ths_low = ref_val - ths_input_low 
@@ -1151,18 +1176,18 @@ def outlier_above_below_binom(Y , X ,
         return Yclean , Xclean , bb
 
 
-def outlier_sigma(datasigmain,seuil=3):
+def outlier_sigma(datasigmain,threshold=3):
     """
     !!!!!!!!! DISCONTINUED !!!!!!!!!!!!!!
-    si un point a un sigma > seuil * moy(sigmas) on le vire
+    si un point a un sigma > threshold * moy(sigmas) on le vire
     
     really old and discontinued, and not really efficient
     !!!!!!!!! DISCONTINUED !!!!!!!!!!!!!!
     """
     moy = np.median(datasigmain)
-    marge = moy * seuil
+    marge = moy * threshold
 
-    print("INFO : outlier_sigma : moy,seuil,marge",  moy,seuil,marge)
+    print("INFO : outlier_sigma : moy,threshold,marge",  moy,threshold,marge)
 
     boolbad = np.abs(datasigmain) < marge
 
