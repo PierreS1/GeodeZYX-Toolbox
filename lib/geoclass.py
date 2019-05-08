@@ -26,10 +26,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import geodetik as geok
-import genefun as genefun
-import softs_runner
-
 import datetime as dt
 import numpy as np
 import dateutil.parser
@@ -57,6 +53,12 @@ from matplotlib.widgets import MultiCursor
 import matplotlib
 import linecache
 import math
+
+import genefun as genefun
+import softs_runner
+import geodetik as geok
+
+
 #import combi_mgex as cmg
 
 

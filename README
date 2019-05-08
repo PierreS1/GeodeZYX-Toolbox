@@ -15,7 +15,7 @@ Thanks a lot to the other contibutors, especially Valérie Ballu, Gustavo Mansur
                                                                                           
 README Revision : 2019-04-18
 
-########## INTRODUCTION
+1) INTRODUCTION
 
 The purpose of this GeodeZYX toolbox is to provide all the functions which
 can be useful for Geodesy and Geophysics. 
@@ -29,9 +29,27 @@ It is designed for Python 3 on a LINUX Ubuntu-like system.
 Also tested with Anaconda
 
 
-########## INSTALLATION
 
-###### Prerequisite
+
+2) INSTALLATION
+
+2.1) Download the toolbox from GitHub
+
+2.1.1) Github in a nutshell
+If you are not familiar with Git and Github have a look in 
+https://guides.github.com/
+
+We decide to adopt the forking+pull request workflow
+https://guides.github.com/activities/forking/
+
+2.1.2) the proper basic steps
+* Create an account on GitHub
+* Go on the page of the project :
+  https://github.com/GeodeZYX/GeodeZYX-Toolbox-Lite
+* Fork it, i.e. click on the "Fork" button
+* Clone your fork on your computer ("Clone" button) 
+
+2.2) Prerequisite
 
 We suppose that the regular Python libraires (matplotlib, numpy, scipy ...)
 are already installed and up-to-date.
@@ -44,12 +62,12 @@ collections
 natsort
 sympy
 
-#### With the standard Python Interpreter of Ubuntu (most cases)
+2.2.1) With the standard Python Interpreter of Ubuntu (most cases)
 
 * In a terminal use pip to install the libraries :
 sudo pip3 -I -U install <name of the library above>
 
-#### With Anaconda
+2.2.2) With Anaconda
 
 * update Anaconda first
 conda update --all
@@ -57,12 +75,11 @@ conda update --all
 * Install the package in Anaconda
 conda install <name of the library above>
 
-
-###### Main installation
+3) Main installation
 
 Since the toolbox is still at the beta level, there is no “pythonic” installation way yet. Here are the two options you have to install the toolbox 
 
-#### General installation (recommended)
+3.1) General installation (recommended)
 
 * In a terminal, edit your .bashrc using e.g. 
 nano ~/.bashrc
@@ -72,7 +89,7 @@ export PYTHONPATH=$PYTHONPATH:<path to the toolbox>/geodezyx_toolbox_py3/lib
 
 * The toolbox is installed !
 
-#### Spyder user
+3.2) Spyder user
 
 For the ones who use the Graphical User Interface Spyder (which I recommend) :
 * click on the “PYTHONPATH manager” button (the Python logo-shaped icon between the spanner icon and the left arrow icon on the main toolbar)
@@ -81,7 +98,7 @@ For the ones who use the Graphical User Interface Spyder (which I recommend) :
 
 * The toolbox is installed !
 
-#### check the installation
+3.3) check the installation
 
 * in a python terminal run 
 import geodetik as geok
@@ -89,9 +106,9 @@ import geodetik as geok
 If no error appears, then the toolbox is well installed !
 Else, it may miss a library. Follow the *prerequisite* section
 
-######## COMPONENTS
+4) COMPONENTS
 
-#### Main libraires
+4.1) Main libraires
 * genefun  : "low level" files and python objects manipulation
 
 * geodetik : "low level" geodetic functions (time and space coordinates conversion ...)
@@ -109,20 +126,19 @@ Else, it may miss a library. Follow the *prerequisite* section
 * geoclass : "high level" geodetic functions (plots, data cleaning ...)
 
 
-#### Other libraires
+4.2) Other libraires
 (To be continued ...)
 geo_files_converter_lib
 gins_runner
 softs_runner
 transformation
 
-######## GET STARTED
+5) GET STARTED
 
 import the modules of the toolbox in your/script function using :
 
 import genefun as gf
 import geodetik as geok
-import 
- as gcls
+import as gcls
 
-and start to work, based on a script in the 'script' folder
+and start to work, based on a script in the 'exemple' folder
