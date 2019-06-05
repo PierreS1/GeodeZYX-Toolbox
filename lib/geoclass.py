@@ -3640,14 +3640,16 @@ def read_sp3_header(sp3_path):
     Sat_prn_list = []
     Sat_sig_list = []
     
-    for l in Lines:
+    for il , l in enumerate(Lines):
+        if il == 1:
+            date = geok.MJD2dt(int(l.split()[4]))
         if l[:2] == "+ ":
             Sat_prn_list.append(l)
         if l[:2] == "++":
             Sat_sig_list.append(l)
         if l[0] == "*":
             break
-    
+
     ### PRN part
     Sat_prn_list_clean = []
     for prn_line in Sat_prn_list:
@@ -3674,11 +3676,15 @@ def read_sp3_header(sp3_path):
         Sat_sig_list_clean = Sat_sig_list_clean + sig_line_splited
 
     Sat_sig_list_final = [int(e) for e in Sat_sig_list_clean[:sat_nbr]]
-
+    
+    
     ### Export part    
     AC_name_list = [ac_name] * sat_nbr
-    Header_DF = pd.DataFrame(list(zip(AC_name_list,Sat_prn_list_final,Sat_sig_list_final)),
-                             columns=["AC","sat","sigma"])
+    Date_list    = [date] * sat_nbr
+
+    Header_DF = pd.DataFrame(list(zip(AC_name_list,Sat_prn_list_final,
+                                      Sat_sig_list_final,Date_list)),
+                             columns=["AC","sat","sigma","epoch"])
     
     return Header_DF
 
