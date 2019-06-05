@@ -1836,7 +1836,66 @@ def read_OTPS_tide_file(pathin,print_line=False,return_array=True):
     else:
         return latlis , lonlis , datlis , hlis
 
+def read_snx_trop(snxfile,dataframe_output=True):
+    """
+    Read troposphere solutions from Troposphere SINEX
+    """
+    
+    STAT , epoc = [] , []
+    tro , stro , tgn , stgn , tge , stge = [] , [] , [] , [] , [] , []
+    
+    flagtrop = False
+    
+    for line in open(snxfile,"r",encoding = "ISO-8859-1"):
+        
+        if re.compile('TROP/SOLUTION').search(line):
+            flagtrop = True
+            continue
+        
+        if re.compile('-TROP/SOLUTION').search(line):
+            flagtrop = False
+            continue
+        
+        if line[0] != ' ':
+            continue
+        else:
+            fields = line.split()
+        
+        if flagtrop ==True:
+            
+            STAT.append(fields[0].upper())
+            if not ':' in fields[1]:
+                epoc.append(geok.convert_partial_year(fields[1]))
+            else:
+                date_elts_lis = fields[1].split(':')
+                yy =  int(date_elts_lis[0]) + 2000
+                doy = int(date_elts_lis[1])
+                sec = int(date_elts_lis[2])
 
+                epoc.append(geok.doy2dt(yy,doy,seconds=sec))
+            
+            tro.append(float(fields[2]))
+            stro.append(float(fields[3]))
+            tgn.append(float(fields[4]))
+            stgn.append(float(fields[5]))
+            tge.append(float(fields[6]))
+            stge.append(float(fields[7]))
+            
+    outtuple = \
+    list(zip(*sorted(zip(STAT , epoc , tro , stro , tgn , stgn , tge , stge))))
+    
+    if dataframe_output:
+        return Tropsinex_DataFrame(outtuple)
+                
+def Tropsinex_DataFrame(read_sinex_result):
+     DF_Sinex = pandas.DataFrame.from_records(list(read_sinex_result)).transpose()
+     colnam = ['STAT','epoc','tro','stro','tgn','stgn','tge','stge']
+     DF_Sinex.columns = colnam
+     cols_numeric = ['tro','stro','tgn','stgn','tge','stge']
+     DF_Sinex[cols_numeric] = DF_Sinex[cols_numeric].apply(pandas.to_numeric, errors='coerce')
+     
+     return DF_Sinex
+     
 def read_sinex(snxfile,dataframe_output=False):
 
     STAT , soln , epoc, AC = [] , [] , [], []
@@ -1945,7 +2004,8 @@ def sinex_DataFrame(read_sinex_result):
 
 
 def read_sinex_versatile(sinex_path_in , id_block,
-                         convert_date_2_dt = True):
+                         convert_date_2_dt = True,
+                         use_last_header_line = True):
     """
     Read a block from a SINEX and return the data as a DataFrame
 
@@ -1959,6 +2019,10 @@ def read_sinex_versatile(sinex_path_in , id_block,
         
     convert_date_2_dt : bool
         Try to convert a SINEX formated date as a python datetime
+        
+    use_last_header_line : bool
+        If the block header contains several lines, the last one will be used 
+        as column names (If False, the first line is used)
                 
     Returns
     -------
@@ -1974,24 +2038,42 @@ def read_sinex_versatile(sinex_path_in , id_block,
                                                          id_block_end)
     Lines_list = Lines_list[1:-1]
     
+    if not Lines_list:
+        print("ERR : read_sinex_versatile : no block found, ",id_block)
+    
     #### Remove commented lines
-    Lines_list_OK = []
+    Lines_list_header = []
+    Lines_list_OK     = []
+    header_lines = True
     for i_l , l in enumerate(Lines_list):
-        if l[0] == " " or  i_l == 0:
+        if not l[0] in (" ","\n") and header_lines:
+            Lines_list_header.append(l)
+        if l[0] == " ":
+            header_lines = False
             Lines_list_OK.append(l)
-            
+
     Lines_str  = "".join(Lines_list_OK)
+                            
+    if len(Lines_list_header) > 0:
+        ### define the header
+        if use_last_header_line:
+            header_line = Lines_list_header[-1]
+        else:   
+            header_line = Lines_list_header[0]
+
+        Header_split = header_line.split()
+        Fields_size = [len(e)+1 for e in Header_split]
     
-    ### define the header
-    header_line = Lines_list[0]
-    Header_split = header_line.split()
-    Fields_size = [len(e)+1 for e in Header_split]
-    
-    ### Read the file
-    DF = pandas.read_fwf(StringIO(Lines_str),width=Fields_size)
-    
-    ### Rename the 1st column (remove the comment marker)
-    DF.rename(columns={DF.columns[0]:DF.columns[0][1:]}, inplace=True)
+        ### Read the file
+        DF = pandas.read_fwf(StringIO(Lines_str),width=Fields_size)
+        
+        ### Rename the 1st column (remove the comment marker)
+        DF.rename(columns={DF.columns[0]:DF.columns[0][1:]}, inplace=True)
+
+    else: # no header in the SINEX
+        DF = pandas.read_csv(StringIO(Lines_str),header=-1 , delim_whitespace=True)
+        DF = pandas.read_csv(StringIO(Lines_str),header=-1 , delim_whitespace=True)
+
     
     for col in DF.columns:
         if convert_date_2_dt and re.match("[0-9]{2}:[0-9]{3}:[0-9]{5}",str(DF[col][0])):

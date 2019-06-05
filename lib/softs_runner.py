@@ -1060,7 +1060,8 @@ def multi_downloader_rinex(statdico,archive_dir,startdate,enddate,
 
 
 def orbclk_long2short_name(longname_filepath_in,rm_longname_file=True,
-                           center_id_last_letter=None):
+                           center_id_last_letter=None,
+                           center_manual_short_name=None):
     """
     Rename a long naming new convention IGS product file to the short old
     convention
@@ -1079,6 +1080,10 @@ def orbclk_long2short_name(longname_filepath_in,rm_longname_file=True,
     center_id_last_letter : str
         replace the last letter of the short AC id by another letter
         (see note below)
+        
+    center_manual_short_name : str
+        replace completely the long name with this one
+        overrides center_id_last_letter
 
     Returns
     -------
@@ -1104,7 +1109,10 @@ def orbclk_long2short_name(longname_filepath_in,rm_longname_file=True,
 
     center = longname_basename[:3]
 
-    if center_id_last_letter:
+
+    if center_manual_short_name:
+        center = center_manual_short_name
+    elif center_id_last_letter:
         center_as_list = list(center)
         center_as_list[-1] = center_id_last_letter
         center = "".join(center_as_list)
@@ -2404,7 +2412,7 @@ def track_runner(rnx_rover,rnx_base,working_dir,experience_prefix,
 
         #sp3Z = orblis[0]
         sp3 = [genefun.uncompress(sp3Z) for sp3Z in orblis]
-        sp3 = [e + ".sp3" if e[-3:] != ".sp3" else e for e in sp3]
+        sp3 = [e  if ".sp3" in e[-5:] else e + ".sp3" for e in sp3]
     else:
         if genefun.is_iterable(forced_sp3_path):
             sp3 = forced_sp3_path

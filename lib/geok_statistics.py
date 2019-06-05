@@ -33,222 +33,43 @@ import scipy
 import genefun
 from scipy.signal import butter, lfilter, freqz
 
+##### Low level statistic function
+
+def rms_mean(A):
+    """
+    returns RMS mean of a list/array
+    """
+    return np.sqrt(np.nanmean(np.square(A)))
+
+def RMSmean(indata):
+    """
+    returns RMS mean of a list/array
+
+    useless redundancy with rms_mean
+    this function use shall be avoided
+    """
+    rms = np.sqrt(np.nanmean(np.square(indata)))
+    return rms
 
 
-def linear_regression(x,y,fulloutput=False,alpha=.95):
-    """    
-    From 2 vectors X and Y, returns linear regression coefficients a and b
+def rms_mean_alternativ(A):
+    """
+    returns "GRGS style" RMS of a list/array
+    the arithmetic mean of the values is substracted from the values
+    i.e.    _
+    √< (A - A)^2 > instead of √< (A)^2 >
+    NB 1808 : It is basically the standard deviation ...
+    """
+    return np.sqrt(np.nanmean(np.square(A - np.nanmean(A))))
 
-    Parameters
-    ----------
-    X & Y : list or numpy.array
-        Values
 
-    fulloutput : bool
-        full output
-        
-    alpha : float
-        alpha value for the confidence interval
-                
-    Returns
-    -------
-    a & b : float
-        Linear regression coefficients
-    
-    If fulloutput == True:
-        
-    confid_interval_slope : float
-        confid_interval_slope
-        
-    std_err : float
-        standard deviation
-        
-    Note
-    ----
-    http://glowingpython.blogspot.fr/2012/03/linear-regression-with-numpy.html 
-    
-    This function is doing more or less the same job as scipy.stats.linregress
+def harmonic_mean(A):
+    """
+    harmonic mean of a list/array A
     """
 
-    # On bosse avec des arrays
-    x = np.array(x)
-    y = np.array(y)
-
-    if len(x) != len(y):
-        print("ERR : linear_regression : len(x) != len(y)")
-        print("      len(x) : " , len(x))
-        print("      len(y) : " , len(y))
-
-        return 0,0
-
-    A = np.array([x, np.ones(len(x))])
-    # linearly generated sequence
-    w = np.linalg.lstsq(A.T,y,rcond=None)[0] # obtaining the parameters
-
-    if not fulloutput:
-        return w[0],w[1]
-    else:
-        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x,y)
-        return w[0],w[1],confid_interval_slope(x,y,alpha),std_err
-
-
-def linear_reg_getvalue(X,a,b,full=True):
-    """    
-    From 2 vector X and coefficients a & b, get Y = a*X + b
-
-    Parameters
-    ----------
-    X : list or numpy.array
-        Values
-
-    a & b : float
-        Linear regression coefficients
-
-    full : bool
-        True : return X , Y = aX + b , False : return Y = aX + b      
-          
-    Returns
-    -------
-    Y : numpy.array
-        if full == False
-    
-    OR
-    
-    X , Y : numpy.array
-        if full == True
-    
-    Note
-    ----
-        Unstable while working with POSIX Time as X-data (too heigh values ? ...)
-        Decimal Years are recommended
-        
-    """
-    
-    if full:
-        return np.array(X), a * np.array(X) + b
-    else:
-        return a * np.array(X) + b
-
-def linear_coef_a_b(x1,y1,x2,y2):
-
-    """
-    Gives coefficients of the line between two points (x1,y1) & (x2,y2)
-    x1,y1,x2,y2 can be iterables
-
-    Parameters
-    ----------
-    x1,y1,x2,y2 : float or list or numpy.array
-        Coordinates of the 1st and the 2nd point
-                
-    Returns
-    -------
-    a : float
-        regression coefficient
-    
-    b1 & b2 : float
-        regression offsets coefficient (b1 must be equal to b2)
-        
-    """
-
-    if genefun.is_iterable(x1):
-        x1 = np.array(x1,dtype=np.float64)
-        x2 = np.array(x2,dtype=np.float64)
-        y1 = np.array(y1,dtype=np.float64)
-        y2 = np.array(y2,dtype=np.float64)
-    else:
-        x1 = float(x1)
-        x2 = float(x2)
-        y1 = float(y1)
-        y2 = float(y2)
-
-    a = (y2 - y1) / (x2 - x1)
-    b1 = y1 - a*x1
-    b2 = y2 - a*x2
-    return a , b1 , b2
-
-def detrend_timeseries(X,Y):
-    """    
-    detrend, i.e. remove linear tendence of a timeserie Y(X)
-
-    Parameters
-    ----------
-    X & Y: list or numpy.array
-        Values
-                
-    Returns
-    -------
-    X & Yout: list or numpy.array
-        Detrended Y
-                
-    """
-
-    X = np.array(X)
-    Y = np.array(Y)
-    a,b = linear_regression(X,Y)
-
-    #Yout = Y - a * (X - X[0])
-    #Yout = Y - ( a * X + b )  
-    
-    Ylinear =  ( a * X + b )
-    Yout    = Y - Ylinear + Y[0] 
-    
-    return X , Yout
-
-
-def confid_interval_slope(x,y,alpha=.95):
-    """
-     Calcule un intervalle de confiance sur une tendance
-     En entrée: x     = la variable indépendante
-                y     = la variable dépendante
-                alpha = la probabilité d'erreur tolérée
-     En sortie: mi    = la borne inférieure de l'intervalle
-                ma    = la borne supérieure de l'intervalle
-                
-    Source (???? => En fait non ...)
-    http://www.i4.auc.dk/borre/matlab
-    http://kom.aau.dk/~borre/matlab/
-    """
-
-    sux=np.sum(x)
-    xb=np.mean(x)
-    suy=np.sum(y)
-    yb=np.mean(y)
-    n=len(x)
-    S1=np.sum(x*y)
-    S2=sux*suy/n
-    Sxy=S1-S2
-    S4=np.sum(x**2)
-    S5=(sux**2)/n
-    Sxx=S4-S5
-    S7=np.sum(y**2)
-    S8=(suy**2)/n
-    Syy=S7-S8
-    b1=Sxy/Sxx
-    b0=yb-b1*xb
-    S14=(Sxy**2)/Sxx
-    s2y=(Syy-S14)/(n-2)
-    sy=np.sqrt(s2y)
-    s2b1=s2y/Sxx
-    s2b0=s2y*(1/n+(xb**2)/Sxx)
-    #t=tq(1-alpha/2,n-2)
-    t = scipy.stats.t.ppf(1-alpha/2,n-2)
-    mi=b1-t*np.sqrt(s2b1)
-    ma=b1+t*np.sqrt(s2b1)
-    return mi,ma
-
-def plot_vertical_bar(xlis , color='r',linewidth=1):
-    out_bar_list = []
-    for x in xlis:
-        out_bar = plt.axvline(x,color=color,linewidth=linewidth)
-        out_bar_list.append(out_bar)
-    return out_bar_list
-
-def plot_vertical_bar_ax(xlis,ax_in,color='r',linewidth=1):
-    out_bar_list = []
-    for x in xlis:
-        out_bar = ax_in.axvline(x,color=color,linewidth=linewidth)
-        out_bar_list.append(out_bar)
-    return out_bar_list
+    A = np.array(A)
+    return len(A) / np.sum(1.0/A)
 
 
 def running_mean(data_in , window , convolve_mode="same"):   
@@ -297,6 +118,11 @@ def running_mean(data_in , window , convolve_mode="same"):
     
     return data_run + data_mean
 
+
+
+###############################################################################
+################## TEST OF DIFFERENT RUNNING MEAN IMPLEMENTATION ##############
+###############################################################################
 
 def running_mean_help():
     help_str = """
@@ -367,6 +193,7 @@ plt.plot(X,Y4a,"y.")
     """
     
     return help_str
+    
 
 def movingaverage(values,window):
     """
@@ -422,19 +249,49 @@ def movingaverage_ter(data, window_width):
     Roman Kh ans
     
     INTERNAL_ID_5  
+    
+    Use 
     """
     cumsum_vec = np.cumsum(np.insert(data, 0, 0)) 
     ma_vec = (cumsum_vec[window_width:] - cumsum_vec[:-window_width]) / window_width
     
     return ma_vec
 
-
+###############################################################################
+########### END OF TEST ZONE OF DIFFERENT RUNNING MEAN IMPLEMENTATION #########
+###############################################################################
+    
 def sinusoide(T,A,omega,phi=0):
     """
+    Determine value for a sinusoid
+
+    Parameters
+    ----------
+    T : numpy.array
+        The time range (X axis)
+
+    omega : float
+        ω = 2πf, angular frequency, the rate of change of the function 
+        argument in units of radians per second
+        
+    phi : float
+         specifies (in radians) where in its cycle the oscillation is at t = 0
+                
+    Returns
+    -------
+    Y : numpy.array
+        Sinusoid values
+        
+    Note
+    ----
     amplitude de la grandeur, appelée aussi valeur de crête, dans l'unité de la grandeur mesurée
+    
     omega : pulsation de la grandeur en rad⋅s-1
+    
     phi : phase instantanée en rad
+    
     phi : phase à l'origine en rad (souvent fixée par l'expérimentateur)
+    
     """
     return A * np.sin(omega * T + phi)
 
@@ -523,22 +380,31 @@ def gaussian_filter_GFZ_style_smoother_improved(tim_ref, dat_ref, width=7):
     """
     Gaussian filter to smooth data, based on
     GFZ's GMT_plus.pm/gaussian_kernel
-      
-    Args :
-        tim_ref : the X/T component of the time serie (in decimal days !)
-        
-        dat_ref : the Y component (the data)
-        
-        width   : size of the window (odd number is best ?)
-        
-    Returns :
-        dat_smt : smoothed Y
     
-    NB :
-        Some other nice ideas here
-        http://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
-        https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
-        https://stackoverflow.com/questions/32900854/how-to-smooth-a-line-using-gaussian-kde-kernel-in-python-setting-a-bandwidth
+    This function is used for the smoothed curve of IGS Orbits/Clock combination
+      
+    Parameters
+    ----------
+    tim_ref : 
+        the X/T component of the time serie (in decimal days !)
+        
+    dat_ref :
+        the Y component (the data)
+        
+    width   :
+        size of the window (odd number is best ?)
+        
+    Returns
+    -------
+    dat_smt :
+        smoothed Y
+    
+    Note
+    ----
+    Some other nice ideas here
+    http://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
+    https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
+    https://stackoverflow.com/questions/32900854/how-to-smooth-a-line-using-gaussian-kde-kernel-in-python-setting-a-bandwidth
     """
 
     tim_raw = tim_ref
@@ -636,17 +502,11 @@ def smooth(x,window_len=11,window='hanning'):
     y=np.convolve(w/w.sum(),s,mode='valid')
     return y
 
-
-
-def harmonic_mean(A):
-    """
-    harmonic mean of a list/array A
-    """
-
-    A = np.array(A)
-    return len(A) / np.sum(1.0/A)
-
 def find_intersection(x1,y1,x2,y2):
+    """
+    find the intersection between 2 lines defines by 2 sets of points 
+    (x1,y1) and (x2,y2)
+    """
     #http://stackoverflow.com/questions/8094374/python-matplotlib-find-intersection-of-lineplots
 
     import scipy.interpolate as interpolate
@@ -690,37 +550,239 @@ def wrapTo180(lon):
         lon = lon[0]
     return lon
 
-# Low level statistic function
 
-def rms_mean(A):
+
+#### Linear regression tools
+
+def linear_regression(x,y,fulloutput=False,alpha=.95):
+    """    
+    From 2 vectors X and Y, returns linear regression coefficients a and b
+
+    Parameters
+    ----------
+    X & Y : list or numpy.array
+        Values
+
+    fulloutput : bool
+        full output
+        
+    alpha : float
+        alpha value for the confidence interval
+                
+    Returns
+    -------
+    a & b : float
+        Linear regression coefficients
+    
+    If fulloutput == True:
+        
+    confid_interval_slope : float
+        confid_interval_slope
+        
+    std_err : float
+        standard deviation
+        
+    Note
+    ----
+    http://glowingpython.blogspot.fr/2012/03/linear-regression-with-numpy.html 
+    
+    This function is doing more or less the same job as scipy.stats.linregress
     """
-    returns RMS mean of a list/array
+
+    # On bosse avec des arrays
+    x = np.array(x)
+    y = np.array(y)
+
+    if len(x) != len(y):
+        print("ERR : linear_regression : len(x) != len(y)")
+        print("      len(x) : " , len(x))
+        print("      len(y) : " , len(y))
+
+        return 0,0
+
+    A = np.array([x, np.ones(len(x))])
+    # linearly generated sequence
+    w = np.linalg.lstsq(A.T,y,rcond=None)[0] # obtaining the parameters
+
+    if not fulloutput:
+        return w[0],w[1]
+    else:
+        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x,y)
+        return w[0],w[1],confid_interval_slope(x,y,alpha),std_err
+
+
+def linear_reg_getvalue(X,a,b,full=True):
+    """    
+    From 2 vector X and coefficients a & b, get Y = a*X + b
+
+    Parameters
+    ----------
+    X : list or numpy.array
+        Values
+
+    a & b : float
+        Linear regression coefficients
+
+    full : bool
+        True : return X , Y = aX + b , False : return Y = aX + b      
+          
+    Returns
+    -------
+    Y : numpy.array
+        if full == False
+    
+    OR
+    
+    X , Y : numpy.array
+        if full == True
+    
+    Note
+    ----
+        Unstable while working with POSIX Time as X-data (too heigh values ? ...)
+        Decimal Years are recommended
+        
     """
-    return np.sqrt(np.nanmean(np.square(A)))
+    
+    if full:
+        return np.array(X), a * np.array(X) + b
+    else:
+        return a * np.array(X) + b
 
-def RMSmean(indata):
+def linear_coef_a_b(x1,y1,x2,y2):
     """
-    returns RMS mean of a list/array
+    Gives coefficients of the line between two points (x1,y1) & (x2,y2)
+    x1,y1,x2,y2 can be iterables
 
-    useless redundancy with rms_mean
-    this function use shall be avoided
+    Parameters
+    ----------
+    x1,y1,x2,y2 : float or list or numpy.array
+        Coordinates of the 1st and the 2nd point
+                
+    Returns
+    -------
+    a : float
+        regression coefficient
+    
+    b1 & b2 : float
+        regression offsets coefficient (b1 must be equal to b2)
+        
     """
-    rms = np.sqrt(np.nanmean(np.square(indata)))
-    return rms
 
+    if genefun.is_iterable(x1):
+        x1 = np.array(x1,dtype=np.float64)
+        x2 = np.array(x2,dtype=np.float64)
+        y1 = np.array(y1,dtype=np.float64)
+        y2 = np.array(y2,dtype=np.float64)
+    else:
+        x1 = float(x1)
+        x2 = float(x2)
+        y1 = float(y1)
+        y2 = float(y2)
 
-def rms_mean_alternativ(A):
+    a = (y2 - y1) / (x2 - x1)
+    b1 = y1 - a*x1
+    b2 = y2 - a*x2
+    return a , b1 , b2
+
+def detrend_timeseries(X,Y):
+    """    
+    detrend, i.e. remove linear tendence of a timeserie Y(X)
+
+    Parameters
+    ----------
+    X & Y: list or numpy.array
+        Values
+                
+    Returns
+    -------
+    X & Yout: list or numpy.array
+        Detrended Y
+                
     """
-    returns "GRGS style" RMS of a list/array
-    the arithmetic mean of the values is substracted from the values
-    NB 1808 : It is basically the standard deviation ...
 
-    i.e.    _
-    √< (A - A)^2 > instead of √< (A)^2 >
+    X = np.array(X)
+    Y = np.array(Y)
+    a,b = linear_regression(X,Y)
+
+    #Yout = Y - a * (X - X[0])
+    #Yout = Y - ( a * X + b )  
+    
+    Ylinear =  ( a * X + b )
+    Yout    = Y - Ylinear + Y[0] 
+    
+    return X , Yout
+
+
+def confid_interval_slope(x,y,alpha=.95):
     """
-    return np.sqrt(np.nanmean(np.square(A - np.nanmean(A))))
+    Determines a confidence interval on a trend
+
+    Parameters
+    ----------
+    x,y : list or numpy.array of floats
+        Data vectors, y(x)
+
+    alpha : float
+        Tolerated error probability (between 0 and 1)
+        
+    param3 : float or int or str or dict or n-tuple or bool or list or numpy.array
+        Description param3
+                
+    Returns
+    -------
+    mi, ma : float
+        Upper and lower confidence interval boundaries
+    
+
+    Source
+    ------
+    http://www.i4.auc.dk/borre/matlab
+    http://kom.aau.dk/~borre/matlab/    
+    """
+
+    sux=np.sum(x)
+    xb=np.mean(x)
+    suy=np.sum(y)
+    yb=np.mean(y)
+    n=len(x)
+    S1=np.sum(x*y)
+    S2=sux*suy/n
+    Sxy=S1-S2
+    S4=np.sum(x**2)
+    S5=(sux**2)/n
+    Sxx=S4-S5
+    S7=np.sum(y**2)
+    S8=(suy**2)/n
+    Syy=S7-S8
+    b1=Sxy/Sxx
+    b0=yb-b1*xb
+    S14=(Sxy**2)/Sxx
+    s2y=(Syy-S14)/(n-2)
+    sy=np.sqrt(s2y)
+    s2b1=s2y/Sxx
+    s2b0=s2y*(1/n+(xb**2)/Sxx)
+    #t=tq(1-alpha/2,n-2)
+    t = scipy.stats.t.ppf(1-alpha/2,n-2)
+    mi=b1-t*np.sqrt(s2b1)
+    ma=b1+t*np.sqrt(s2b1)
+    return mi,ma
+
+def plot_vertical_bar(xlis , color='r',linewidth=1):
+    out_bar_list = []
+    for x in xlis:
+        out_bar = plt.axvline(x,color=color,linewidth=linewidth)
+        out_bar_list.append(out_bar)
+    return out_bar_list
+
+def plot_vertical_bar_ax(xlis,ax_in,color='r',linewidth=1):
+    out_bar_list = []
+    for x in xlis:
+        out_bar = ax_in.axvline(x,color=color,linewidth=linewidth)
+        out_bar_list.append(out_bar)
+    return out_bar_list
 
 
+#### OUTLIER DETECTION
 def mad(data,mode='median'):
     """
     returns Median Absolute Deviation (MAD) a list/array
@@ -733,7 +795,7 @@ def mad(data,mode='median'):
     return MAD
 
 
-def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
+def outlier_mad(data,threshold=3.5,verbose=False,convert_to_np_array=True,
                 mad_mode = 'median' ):
     
     """    
@@ -747,7 +809,7 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
     data : list or numpy.array
         Values
 
-    seuil : float
+    threshold : float
         MAD threshold        
         
     verbose : bool
@@ -768,7 +830,7 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
         
     Source
     ------
-    Utilisation de la MAD pour detecter les outliers
+    Use of the MAD for outlier detection
     http://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm
     http://web.ipac.caltech.edu/staff/fmasci/home/statistics_refs/BetterThanMAD.pdf
     """
@@ -797,8 +859,8 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
 
     diff = data - med
     MZS = 0.6745 * np.abs(diff) / MAD
-    MZS[np.isnan(MZS)] = seuil * 10
-    boolbad = MZS < seuil
+    MZS[np.isnan(MZS)] = threshold * 10
+    boolbad = MZS < threshold
     dataout = data[boolbad]
     nbout = float(sum(boolbad))
     ratio = (nbinp-nbout)/nbinp
@@ -806,15 +868,15 @@ def outlier_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
         print("ratio d'elimination : %i / %i, %f p.c." %(nbinp-nbout,nbinp,ratio * 100))
     return dataout , boolbad
 
-def outiler_mad(data,seuil=3.5,verbose=False,convert_to_np_array=True,
+def outiler_mad(data,threshold=3.5,verbose=False,convert_to_np_array=True,
                 mad_mode = 'median' ):
     """
     wrapper of outlier_mad, maintened for legacy with a typo
     """
-    return outlier_mad(data,seuil , verbose , convert_to_np_array , mad_mode )
+    return outlier_mad(data,threshold , verbose , convert_to_np_array , mad_mode )
 
 
-def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
+def outlier_mad_binom(Y,X,threshold=3.5,verbose=False,detrend_first=False,
                       return_booleans = False):   
     """    
     clean the outlier of Y usind MAD approach 
@@ -830,7 +892,7 @@ def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
     X : list or numpy.array
         X Values so as X => Y(X)
 
-    seuil : float
+    threshold : float
         MAD threshold        
         
     verbose : bool
@@ -853,7 +915,7 @@ def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
     else:
         _ , Ywork = np.array(X) , np.array(Y)
         
-    _ , bb = outiler_mad(Ywork,seuil,verbose)
+    _ , bb = outiler_mad(Ywork,threshold,verbose)
     
     Xclean = np.array(X)[bb]    
     Yclean = np.array(Y)[bb]
@@ -863,7 +925,7 @@ def outlier_mad_binom(Y,X,seuil=3.5,verbose=False,detrend_first=False,
     else:
         return Yclean , Xclean , bb
 
-def outlier_mad_binom_legacy(X,Y,seuil=3.5,verbose=False,detrend_first=False,
+def outlier_mad_binom_legacy(X,Y,threshold=3.5,verbose=False,detrend_first=False,
                       return_booleans = False):
     """
     clean the outlier of X and clean the corresponding values in Y
@@ -876,7 +938,7 @@ def outlier_mad_binom_legacy(X,Y,seuil=3.5,verbose=False,detrend_first=False,
     else:
         Xwork , _ = np.array(X) , np.array(Y)
         
-    _ , bb = outiler_mad(Xwork,seuil,verbose)
+    _ , bb = outiler_mad(Xwork,threshold,verbose)
     
     Xclean = np.array(X)[bb]    
     Yclean = np.array(Y)[bb]
@@ -931,7 +993,7 @@ def outlier_above_below_simple(X , low_bound  , upp_bound,
         
 
 def outlier_above_below(X , threshold_values ,
-                        reference = np.nanmean  , 
+                        reference = np.nanmedian  , 
                         theshold_absolute = True,
                         return_booleans   = True,
                         theshold_relative_value = "reference",
@@ -1002,12 +1064,11 @@ def outlier_above_below(X , threshold_values ,
         ref_val = reference
         
     if theshold_relative_value in ("reference" , None):
-        relativ_val = reference
+        relativ_val = ref_val
     elif callable(theshold_relative_value):
         relativ_val = theshold_relative_value(X)
     else:
-        relativ_val = reference
-        
+        relativ_val = ref_val
         
     if theshold_absolute:
         ths_low = ref_val - ths_input_low 
@@ -1115,16 +1176,18 @@ def outlier_above_below_binom(Y , X ,
         return Yclean , Xclean , bb
 
 
-def outlier_sigma(datasigmain,seuil=3):
+def outlier_sigma(datasigmain,threshold=3):
     """
-    si un point a un sigma > seuil * moy(sigmas) on le vire
+    !!!!!!!!! DISCONTINUED !!!!!!!!!!!!!!
+    si un point a un sigma > threshold * moy(sigmas) on le vire
     
     really old and discontinued, and not really efficient
+    !!!!!!!!! DISCONTINUED !!!!!!!!!!!!!!
     """
     moy = np.median(datasigmain)
-    marge = moy * seuil
+    marge = moy * threshold
 
-    print("INFO : outlier_sigma : moy,seuil,marge",  moy,seuil,marge)
+    print("INFO : outlier_sigma : moy,threshold,marge",  moy,threshold,marge)
 
     boolbad = np.abs(datasigmain) < marge
 
@@ -1135,7 +1198,9 @@ def outlier_sigma(datasigmain,seuil=3):
 
 def outlier_overmean(Xin,Yin,marge=0.1):
     """
+    !!!!!!!!! DISCONTINUED !!!!!!!!!!!!!!
     really old and discontinued, use outlier_above_below instead
+    !!!!!!!!! DISCONTINUED !!!!!!!!!!!!!!
     """
 
     # elimine les points qui sont au dela d'une certaine marge au dessus de la moyenne
@@ -1297,6 +1362,9 @@ def time_win_multi_start_end(Start_list_in,End_list_in,Tlisin,Datalisin,
 
 
 def get_season(now):
+    """
+    get the season from a datetime
+    """
     from datetime import date, datetime
 
     seasons = [('winter', (date(1,  1,  1),  date(1,  3, 20))),
@@ -1316,6 +1384,9 @@ def get_season(now):
 
 
 def color_of_season(datein):
+    """
+    give a color for a given season
+    """
     season = get_season(datein)
     if season == 'winter':
         outcolor = 'b'

@@ -34,7 +34,6 @@ import struct
 
 import conversion_general as cnv_gen
 
-
 #  _______ _                   _____                              _
 # |__   __(_)                 / ____|                            (_)
 #    | |   _ _ __ ___   ___  | |     ___  _ ____   _____ _ __ ___ _  ___  _ __
@@ -131,6 +130,34 @@ def tgipsy2dt(tin):
         return tout
 
     return tout
+
+def numpy_datetime2dt(npdtin):
+    """
+    Time conversion
+    
+    Numpy Datetime => Datetime
+
+    Parameters
+    ----------
+    npdtin : np.datetime64 or list/numpy.array of np.datetime64 
+        Numpy Datetime.  Can handle several time in a list.
+                
+    Returns
+    -------
+    python_datetime : datetime or list/numpy.array of datetime
+        Converted Datetime(s)
+        
+    Source
+    ------
+        https://stackoverflow.com/questions/29753060/how-to-convert-numpy-datetime64-into-datetime/29755657
+    """
+    if cnv_gen.is_iterable(npdtin):
+        return [numpy_datetime2dt(e) for e in npdtin]
+    else:
+        python_datetime = npdtin.astype('M8[ms]').astype('O') 
+    return python_datetime
+
+
 
 def matlab_time2dt(matlab_datenum):
     """
@@ -426,7 +453,26 @@ def dt2doy_year(dtin,outputtype=str):
     else:
         return outputtype(dtin.strftime('%j')),outputtype(dtin.strftime('%Y'))
     
+def dt2fracday(dtin):
+    """
+    Python's datetime => Seconds in days
 
+    Parameters
+    ----------
+    dtin : datetime or list/numpy.array of datetime
+        Datetime(s). Can handle several datetimes in an iterable.
+        
+    Returns
+    -------
+    fraction_day : float
+        Fractional of the day
+        Is a list of int if the input is an iterable
+    """
+    if cnv_gen.is_iterable(dtin):
+        return [dt2fracday(e) for e in dtin]
+    else:
+        return dtin.hour / 24 + dtin.minute / (60*24) + dtin.second / (60*60*24)
+    
 def dt2secinday(dtin):
     """
     Time conversion
@@ -647,7 +693,7 @@ def dt2gpstime(dtin,dayinweek=True):
         Is a list of tuple if the input is an iterable
     """
     
-    if cnv_gen.is_iterable(dt):
+    if cnv_gen.is_iterable(dtin):
         return [dt2gpstime(e) for e in dtin]
         
     else:
@@ -780,6 +826,20 @@ def gpstime2dt(gpsweek,gpsdow_or_seconds,dow_input = True):
         final_time = dt.datetime(final_time.year, final_time.month, final_time.day)
 
     return final_time
+
+
+def gpsweek_decimal2dt(gpsweekdec_in):
+    if cnv_gen.is_iterable(gpsweekdec_in):
+        return [gpsweek_decimal2dt(e) for e in gpsweekdec_in]
+    else:
+        week_floor    = np.floor(gpsweekdec_in)
+        week_dec_part = gpsweekdec_in - week_floor 
+        
+        dt_out = gpstime2dt(week_floor,week_dec_part * 7)
+        return dt_out
+    
+
+
 
 def dt_gpstime2dt_utc(dtgpsin,out_array=False):
     """

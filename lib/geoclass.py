@@ -26,10 +26,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import geodetik as geok
-import genefun as genefun
-import softs_runner
-
 import datetime as dt
 import numpy as np
 import dateutil.parser
@@ -39,6 +35,7 @@ import scipy
 from scipy.interpolate import interp1d
 import os
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from matplotlib.figure import Figure
 import csv
 import pandas as pd
@@ -51,10 +48,17 @@ import operator
 from natsort import natsorted, ns
 import tabulate
 import geo_files_converter_lib as gfc
+import geo_trop as gtro
 from matplotlib.widgets import MultiCursor
 import matplotlib
 import linecache
 import math
+
+import genefun as genefun
+import softs_runner
+import geodetik as geok
+
+
 #import combi_mgex as cmg
 
 
@@ -326,11 +330,15 @@ class TimeSeriePoint:
     def __repr__(self):
         if self.pts == []:
             raise Exception('TS is empty ...')
-
+        
         start = self.startdate()
         end = self.enddate()
-        return '{} {} {} {} {}'.format(self.stat,self.nbpts,'points',start,end)
-        return None
+        nbday = int((end - start).days + 1.)
+        
+        ratio = self.nbpts * 100. / nbday
+        
+        return '{} {} {} {} {} {} {} {:5.2f}{}'.format(self.stat,self.nbpts,'points',
+                start,end,nbday,"nb days", ratio,"%")
 
     def __getitem__(self,i):
         return self.pts[i]
@@ -1586,8 +1594,50 @@ def read_gins_solution_multi(filein_list,return_dict = True):
         return ts_list
         
 
-
-
+def read_epos_sta_kinematics(filein):
+    """
+    read an EPOS kinematic solutions
+    """
+    
+    F = open(filein)
+    Lines_4_DF_stk = []
+    for l in F:
+        fields = l.split()
+        if l[0] != "K" and l[0] != "U" and l[0] != "X":
+            continue
+        if l[0] == "K" or l[0] == "U" or l[0] == "X":
+            namstat = fields[2]
+            numstat = int(fields[1])
+            MJD_epo = float(fields[3])
+            numobs = int(fields[4])
+            
+            X = float(fields[6])
+            Y = float(fields[7])
+            Z = float(fields[8])
+            sX = float(fields[10])
+            sY = float(fields[11])
+            sZ = float(fields[12])
+            
+            N = float(fields[14])
+            E = float(fields[15])
+            U = float(fields[16])
+            sN = float(fields[18])
+            sE = float(fields[19])
+            sU = float(fields[20])
+            
+            tup_4_df = (namstat,numstat,MJD_epo,numobs,X,Y,Z,sX,sY,sZ,
+                        N,E,U,sN,sE,sU)
+            Lines_4_DF_stk.append(tup_4_df)
+            
+    columns = ("site","site_num",
+                   "MJD_epo","numobs",
+                   "x","y","z","sx","sy","sz",
+                   "N","E","U","sN","sE","sU")
+    
+    DFout = pd.DataFrame(Lines_4_DF_stk,
+                     columns=columns)
+    return DFout
+    
 def read_epos_sta_coords_mono(filein,return_df=True):
     """
     read an EPOS's YYYY_DDD_XX_sta_coordinates coordinates files
@@ -1691,6 +1741,29 @@ def read_epos_sta_coords_multi(filein_list,return_dict = True):
         return ts_list
     
     
+def read_epos_slv_times(p):
+    L = genefun.extract_text_between_elements_2(p,"\+sum_times/estimates","\-sum_times/estimates")
+    
+    
+    Lgood = []
+    for l in L[1:-1]:
+        if "EPOCHE" in l:
+            cur_epoc_line = l
+            cur_epoc_f = cur_epoc_line.split()
+            cur_epoc   = geok.MJD2dt(int(cur_epoc_f[1])) +  dt.timedelta(seconds=int(86400*float(cur_epoc_f[2])))
+            
+        if re.match("^   [0-9]{4}.*",l):
+            Lgood.append([cur_epoc] + [float(e) for e in l.split()])
+            
+            
+    DF = pd.DataFrame(Lgood,columns=["epoch","stat","offset","offset_sig"])
+    
+    DF["stat"] = DF["stat"].astype('int')
+    
+    return DF
+
+
+    
 def write_epos_sta_coords(DF_in,file_out):
     
     DF_work = DF_in.sort_values(["site","MJD_start"])
@@ -1746,11 +1819,15 @@ def write_epos_sta_coords(DF_in,file_out):
     return final_str
 
 
-def prn_int_2_prn_str(prn_int):
+def prn_int_2_prn_str(prn_int,full_out=False):
     """
     for read_combi_sum_full
+    
+    if full_out : return e.g. "G04","G",4
     """
     const = "X"
+
+    prn_int = int(prn_int)
     
     prn_int_out = prn_int
     
@@ -1772,10 +1849,13 @@ def prn_int_2_prn_str(prn_int):
     
     prn_str = const + str(prn_int_out).zfill(2)
     
-    return prn_str
+    if not full_out:
+        return prn_str
+    else:
+        return prn_str , const , prn_int_out
 
 def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
-                        convert_prn_int_2_str=True):
+                        set_PRN_as_index=True):
     Vals_stk = []
 
     for l in open(sum_full_file):
@@ -1830,7 +1910,8 @@ def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
     DF.date_dt  = date_dt
     DF.date_gps = genefun.join_improved("",geok.dt2gpstime(date_dt))
     
-    DF.set_index("PRN_str",inplace=True)
+    if set_PRN_as_index:
+        DF.set_index("PRN_str",inplace=True)
     
     return DF
 
@@ -1882,6 +1963,9 @@ def read_combi_sum_exclu(sum_file,return_as_df=True,
 
 def read_combi_clk_rms(sum_file,return_as_df=True,
                        clk_ref_cen_gal = "com"):
+    """
+    based on : read_good_clk_rms_one
+    """
     
     strt = " RESULTS OF FINAL WEIGHTED COMBINATION"
     end  = " CLK_REF_CEN_GAL: " + clk_ref_cen_gal
@@ -1893,7 +1977,6 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
     Lres = [e for e in L if re.search("^ [a-z]{3} \|",e)]
     
     Lres_splited = [e.split() for e in Lres]
-    
     
     filnam = os.path.basename(sum_file)
     if "log" in filnam:
@@ -1919,7 +2002,7 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
         return pd.DataFrame(rms_dict,index=[tdt])
     else:
         return tdt,rms_dict
-
+    
 
 def read_combi_clk_rms_full_table(path_in):
     """
@@ -1954,6 +2037,27 @@ def read_combi_clk_rms_full_table(path_in):
     DF = DF.set_index("SAT")
     
     return DF
+
+
+def read_combi_REPORT(Path_list):
+    STK = []
+    for p in Path_list:
+        F = open(p)
+        for l in F:
+            f = l.split()
+            if "epoch" in l:
+                epoch = geok.gpstime2dt(int(f[2]),int(f[3]))
+            if "orb_flag_x" in l:
+                prn_str , const , prn_int = prn_int_2_prn_str((f[2]),True)
+                STK.append((epoch,prn_str,const , prn_int,"all"))
+            if "orb_excl_sat" in l:
+                prn_str , const , prn_int = prn_int_2_prn_str((f[3]),True)
+                STK.append((epoch,prn_str,const , prn_int,f[2]))    
+                
+    DF = pd.DataFrame(STK,columns=("epoch","PRN_str","CONST","PRN","AC"))
+
+    return DF
+
 
 
 
@@ -2771,43 +2875,72 @@ def read_jpl_timeseries_solo(latlonrad_files_list):
 
     return tsout
 
-def read_nevada(filein):
+def read_nevada(filein,input_coords="enu"):
+    """
+    input_coords="enu" or "xyz"
+    """
 
     tsout = TimeSeriePoint()
 
     envfile = open(filein)
 
-    for l in envfile:
-                
-        f = l.split()
+    if input_coords=="enu":
+        for l in envfile:
+            f = l.split()
+    
+            if "site YYMMMDD" in l:
+                continue
+            if len(l) == 0:
+                continue
+    
+            stat = f[0]
+    
+            T = geok.year_decimal2dt(float(f[2]))
+    
+            N = float(f[10])
+            E = float(f[8])
+            U = float(f[12])
+    
+            sN = float(f[15])
+            sE = float(f[14])
+            sU = float(f[16])
+    
+            point = Point(E,N,U,T,'ENU',sE,sN,sU)
+    
+            #tsout.refENU = Point()
+    
+            tsout.boolENU = True
+            tsout.add_point(point)
 
-        if "site YYMMMDD" in l:
-            continue
+
+    if input_coords=="xyz":
+        for l in envfile:
+            f = l.split()
+    
+            if "site YYMMMDD" in l:
+                continue
+            if len(l) == 0:
+                continue
+    
+            stat = f[0]
+    
+            T = geok.year_decimal2dt(float(f[2]))
+    
+            X = float(f[3])
+            Y = float(f[4])
+            Z = float(f[5])
+    
+            sX = float(f[6])
+            sY = float(f[7])
+            sZ = float(f[8])
+    
+            point = Point(X,Y,Z,T,'XYZ',sX,sY,sZ)
+
+            point.anex['Rxy'] = float(f[9])
+            point.anex['Rxz'] = float(f[10])
+            point.anex['Ryz'] = float(f[11])
         
-        if len(l) == 0:
-            continue
-
-        if len(l) == 0:
-            continue
-
-        stat = f[0]
-
-        T = geok.year_decimal2dt(float(f[2]))
-
-        N = float(f[10])
-        E = float(f[8])
-        U = float(f[12])
-
-        sN = float(f[15])
-        sE = float(f[14])
-        sU = float(f[16])
-
-        point = Point(E,N,U,T,'ENU',sE,sN,sU)
-
-        #tsout.refENU = Point()
-
-        tsout.boolENU = True
-        tsout.add_point(point)
+            tsout.add_point(point)    
 
     tsout.stat = stat
 
@@ -5073,6 +5206,258 @@ def stations_in_sinex_mono(sinex_path):
     return epoch , stats_list
 
 
+####################### Compare troposphere delay  ####################################################    
+def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=False,mode="DF",mode_coor="sinex",coord_t="static"):
+    """
+    Calculate differences of tropospheric delay and gradients between selected stations (Atmospheric ties)
+    Args  :
+          sinex_file : troposphere solutions from sinex
+          STA1 : Reference station
+          STA2 : Rover station
+          coord_file : Station coordinates file path
+          grid_met : Grid file for meteological information from Global Pressture Temperature (GPT)
+          apply_ties : Apply height coorections from standard ties (Default No)
+          mode : data in DataFrame (DF) or SINEX (SINEX) (Default DataFrame)
+          mode_coor : Coordinates file format in SINEX or EPOS or DataFrame format (Argruments : sinex , epos , df)
+          coord_t : static (default) or kinematic
+    Return :
+         trop_diff : difference of tropospheric delay and gradients between selected stations (Atmospheric ties)
+                     and uncertainty of atmospheric ties and gradients ties
+    """
+    
+    if mode == "SINEX":    
+        trop_pd = gfc.read_snx_trop(input_file)
+    elif mode == "DF":
+        trop_pd = input_file
+    else:
+        import sys
+        print("No this option for troposphere solution")
+        sys.exit()
+        
+    trop_ref = trop_pd[trop_pd.STAT == STA1]
+    trop_rov = trop_pd[trop_pd.STAT == STA2]
+    
+    if trop_ref.empty:
+        print("No solution for "+STA1+" Reference station")
+        return None,None
+
+    if trop_rov.empty:
+        print("No solution for "+STA2+" Rover station")
+        return None,None
+    
+    diff_pd = pd.merge(trop_ref,trop_rov,how='outer',on='epoc')
+    diff_pd = diff_pd.dropna()
+    # Tropospheric ties
+    diff_pd['Trop_ties'] = diff_pd['tro_x'] - diff_pd['tro_y']
+    diff_pd['STrop_ties'] = np.nan # add blank column before input values
+    diff_pd['STrop_ties'] = diff_pd.apply(lambda x: np.round(np.sqrt(x.stro_x**2 + x.stro_y**2),2),axis=1)
+    
+    # North gradients ties
+    diff_pd['Ngra_ties'] = diff_pd['tgn_x'] - diff_pd['tgn_y']
+    diff_pd['SNgra_ties'] = np.nan # add blank column before input values
+    diff_pd['SNgra_ties'] = diff_pd.apply(lambda x: np.round(np.sqrt(x.stgn_x**2 + x.stgn_y**2),2),axis=1)
+    
+    # East gradients ties
+    diff_pd['Egra_ties'] = diff_pd['tge_x'] - diff_pd['tge_y']
+    diff_pd['SEgra_ties'] = np.nan # add blank column before input values
+    diff_pd['SEgra_ties'] = diff_pd.apply(lambda x: np.round(np.sqrt(x.stge_x**2 + x.stge_y**2),2),axis=1)
+    
+     # Apply height corrections from Standard ties
+    if apply_ties == True:
+        
+        if isinstance(grid_met,str):
+            import sys
+            print("Please read grid file before use this function")
+            sys.exit()
+        
+        if mode_coor == "epos" and coord_t == "static":
+            coord = read_epos_sta_coords_mono(coord_file)
+            # Extract coordinates Ref station in Lat. Lon. height
+            coord_ref = coord[coord.site==STA1]
+            lat_ref , lon_ref , h_ref = geok.XYZ2GEO(coord_ref.x,coord_ref.y,coord_ref.z,False)
+            # Extract coordinates Rov station in Lat. Lon. height
+            coord_rov = coord[coord.site==STA2]
+            lat_rov , lon_rov , h_rov = geok.XYZ2GEO(coord_rov.x,coord_rov.y,coord_rov.z,False)
+           
+            #Merge coordinates results
+            coord_res = pd.merge(coord_ref,coord_rov,how='outer',on='MJD_ref')
+            coord_res['lat_ref'] , coord_res['lon_ref'] , coord_res['h_ref'] = float(lat_ref) , float(lon_ref) , float(h_ref)
+            coord_res['lat_rov'] , coord_res['lon_rov'] , coord_res['h_rov'] = float(lat_rov) , float(lon_rov) , float(h_rov)
+            
+            #drop unnecessary column
+            coord_res = coord_res.drop([ 'site_num_x', 'tecto_plate_x', 'MJD_start_x',
+                                        'MJD_end_x', 'Vx_x',
+                                        'Vy_x', 'Vz_x', 'sVx_x', 'sVy_x', 'sVz_x', 'site_num_y',
+                                        'tecto_plate_y', 'MJD_start_y', 'MJD_end_y', 'Vx_y', 'Vy_y', 'Vz_y', 'sVx_y', 'sVy_y',
+                                        'sVz_y'],axis=1)
+            
+        elif mode_coor == "sinex" and coord_t == "static":
+            coord = gfc.read_sinex(coord_file,True)
+             # Extract coordinates Ref station in Lat. Lon. height
+            coord_ref = coord[coord.STAT==STA1]
+            lat_ref , lon_ref , h_ref = geok.XYZ2GEO(coord_ref.x,coord_ref.y,coord_ref.z,False)
+            # Extract coordinates Rov station in Lat. Lon. height
+            coord_rov = coord[coord.STAT==STA2]
+            lat_rov , lon_rov , h_rov = geok.XYZ2GEO(coord_rov.x,coord_rov.y,coord_rov.z,False)
+            
+            #Merge coordinates results
+            coord_res = pd.merge(coord_ref,coord_rov,how='outer',on='epoc')
+            coord_res['lat_ref'] , coord_res['lon_ref'] , coord_res['h_ref'] = float(lat_ref) , float(lon_ref) , float(h_ref)
+            coord_res['lat_rov'] , coord_res['lon_rov'] , coord_res['h_rov'] = float(lat_rov) , float(lon_rov) , float(h_rov)
+            
+             #drop unnecessary columns
+            coord_res = coord_res.drop(['AC_x', 'soln_x', 'vx_x', 'vy_x', 'vz_x', 'svx_x', 'svy_x', 'svz_x', 'start_x',
+                                       'end_x', 'AC_y', 'soln_y', 'vx_y', 'vy_y', 'vz_y', 'svx_y', 'svy_y', 'svz_y',
+                                       'start_y', 'end_y'],axis=1)
+            
+        elif mode_coor == "epos" and coord_t == "kinematic":
+            coord = read_epos_sta_kinematics(coord_file)
+            # Extract coordinates Ref station in Lat. Lon. height
+            coord_ref = coord[coord.site==STA1.lower()]
+            f_x_ref , f_y_ref , f_z_ref = interpolator_with_extrapolated(coord_ref.MJD_epo,coord_ref.x,coord_ref.y,coord_ref.z)
+            x_ref_new = f_x_ref(geok.dt2MJD(diff_pd.epoc))
+            y_ref_new = f_y_ref(geok.dt2MJD(diff_pd.epoc))
+            z_ref_new = f_z_ref(geok.dt2MJD(diff_pd.epoc))
+            lat_ref , lon_ref , h_ref = geok.XYZ2GEO(x_ref_new,y_ref_new,z_ref_new,False)
+            
+            # Extract coordinates Rov station in Lat. Lon. height
+            coord_rov = coord[coord.site==STA2.lower()]
+            f_x_rov , f_y_rov , f_z_rov = interpolator_with_extrapolated(coord_rov.MJD_epo,coord_rov.x,coord_rov.y,coord_rov.z)
+            x_rov_new = f_x_rov(geok.dt2MJD(diff_pd.epoc))
+            y_rov_new = f_y_rov(geok.dt2MJD(diff_pd.epoc))
+            z_rov_new = f_z_rov(geok.dt2MJD(diff_pd.epoc))
+            lat_rov , lon_rov , h_rov = geok.XYZ2GEO(x_rov_new,y_rov_new,z_rov_new,False)
+            
+            diff_pd['lat_ref'] , diff_pd['lon_ref'] , diff_pd['h_ref'] = lat_ref , lon_ref , h_ref
+            diff_pd['lat_rov'] , diff_pd['lon_rov'] , diff_pd['h_rov'] = lat_rov , lon_rov , h_rov
+           
+            #Merge coordinates results
+            coord_res = diff_pd[['STAT_x','STAT_y','epoc','lat_ref','lon_ref','h_ref','lat_rov','lon_rov','h_rov']].copy()
+            coord_res = coord_res.rename(index=str,columns={"STAT_x":"STAT_ref","STAT_y":"STAT_rov"})
+        else:
+            import sys
+            print("No this option for coordinates")
+            sys.exit()
+        #Extract standard ties
+        
+        grid = grid_met
+        if coord_t == "kinematic":
+            diff_pd['stand_ties'] = diff_pd.apply(lambda x: gtro.calc_stand_ties(x['epoc'], x.lat_ref , x.lon_ref , x.h_ref,x.lat_rov , x.lon_rov , x.h_rov,grid),axis=1)
+        elif coord_t == "static":
+            diff_pd['stand_ties'] = diff_pd.apply(lambda x: gtro.calc_stand_ties(x['epoc'], float(lat_ref) , float(lon_ref) , float(h_ref) , float(lat_rov) , float(lon_rov) , float(h_rov),grid),axis=1)
+        
+       
+        diff_pd['Trop_ties_corr'] = diff_pd.apply(lambda x: x['tro_x'] - (x['tro_y']+x['stand_ties']),axis=1)
+        
+    #drop unnecessary column
+    if coord_t == "kinematic":
+        diff_pd = diff_pd.drop(['tro_x', 'stro_x', 'tgn_x', 'stgn_x', 'tge_x', 'stge_x','tro_y', 'stro_y', 'tgn_y', 'stgn_y', 'tge_y','stge_y','lat_ref','lon_ref','h_ref','lat_rov','lon_rov','h_rov'],axis=1)
+    else:
+        diff_pd = diff_pd.drop(['tro_x', 'stro_x', 'tgn_x', 'stgn_x', 'tge_x', 'stge_x','tro_y', 'stro_y', 'tgn_y', 'stgn_y', 'tge_y','stge_y'],axis=1)
+    
+    #Change column name of station
+    diff_pd = diff_pd.rename(index=str,columns={"STAT_x":"STAT_ref","STAT_y":"STAT_rov"})
+
+    return diff_pd,coord_res
+
+def stat_summary_trop_ties(df):
+    wmean_no_ties = np.round(np.average(df.Trop_ties,weights = 1/df.STrop_ties),3)
+    wmean_wt_ties = np.round(np.average(df.Trop_ties_corr,weights = 1/df.STrop_ties),3)
+    rms_mean_no_ties = np.round(geok.rms_mean(df.Trop_ties),3)
+    rms_mean_wt_ties = np.round(geok.rms_mean(df.Trop_ties_corr),3)
+    
+    return [wmean_no_ties,wmean_wt_ties,rms_mean_no_ties,rms_mean_wt_ties]
+
+def plot_trop_ties(df,ref_sta,rov_sta,analy_coor=False,analy_num_obs=False,df_coord="",savePlot=False,filePath="",fileName=""):
+    """
+    Plot tropospheric ties function
+    Input:
+        df : DataFrame from "compare_trop_ties" function
+        ref_sta : Refernce station
+        rov_sta : Rover station
+        analy_coor : Add height difference information from "compare_trop_ties"
+        analy_num_obs : Add plot number of observation from "compare_trop_ties"
+        df_coord : list of height difference
+        savePlot : save figure
+        filePath : Directory to save
+        fileName : Filename of figure
+    """
+    epo_plt = geok.dt2year_decimal(df.epoc)
+    h_diff = df_coord.h_ref - df_coord.h_rov
+    if analy_coor:
+        
+        fig, ax = plt.subplots(3,1,sharex=True)
+        axA = ax[0]
+        axB = ax[1]
+        axC = ax[2]
+        axA.plot(epo_plt,df.Trop_ties , marker="P",linestyle="--",label="Trop.ties")
+        axA.plot(np.unique(epo_plt), np.poly1d(np.polyfit(epo_plt, df.Trop_ties, 1))(np.unique(epo_plt)),label="Trop. ties fitline")
+        if 'Trop_ties_corr' in df.columns:
+            axA.plot(epo_plt,df.Trop_ties_corr,marker="*",linestyle="-.",label="Trop. ties apply height corr.")
+            axA.plot(np.unique(epo_plt), np.poly1d(np.polyfit(epo_plt, df.Trop_ties_corr, 1))(np.unique(epo_plt)),label="Trop. ties apply height fitline")
+        axA.grid()
+        axA.legend()
+        axA.set_ylabel("Trop. ties (mm)")
+        axA.set_xlabel("Time")
+        axA.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+        
+        axB.plot(epo_plt,h_diff,marker="P",linestyle="--",label="Height difference")
+        axB.plot(np.unique(epo_plt), np.poly1d(np.polyfit(epo_plt, h_diff, 1))(np.unique(epo_plt)),label="Height diff. fitline")
+        axB.grid()
+        axB.legend()
+        axB.set_ylabel("Height difference (m)")
+        axB.set_xlabel("Time")
+        axB.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+        if analy_num_obs:
+            if len(epo_plt) != len(df.num_obs_ref):
+                print("No plot number of observations")
+                fig.delaxes(axC)
+            else:
+                axC.plot(epo_plt,df.num_obs_ref,marker="P",linestyle="--",label="Num obs. Ref sta")
+                axC.plot(epo_plt,df.num_obs_rov,marker="*",linestyle="-.",label="Num obs. Rov sta")
+                axC.grid()
+                axC.legend()
+                axC.set_ylabel("Num Obs.")
+                axC.set_xlabel("Time")
+                axC.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+    else:
+        fig , ax = plt.subplots(2,1,sharex=True)
+        axA = ax[0]
+        axC = ax[1]
+        axA.plot(epo_plt,df.Trop_ties , marker="P",linestyle="--",label="Trop.ties")
+        axA.plot(np.unique(epo_plt), np.poly1d(np.polyfit(epo_plt, df.Trop_ties, 1))(np.unique(epo_plt)),label="Trop. ties fitline")
+        if 'Trop_ties_corr' in df.columns:
+            axA.plot(epo_plt,df.Trop_ties_corr,marker="*",linestyle="-.",label="Trop. ties apply height corr.")
+            axA.plot(np.unique(epo_plt), np.poly1d(np.polyfit(epo_plt, df.Trop_ties_corr, 1))(np.unique(epo_plt)),label="Trop. ties apply height fitline")
+        axA.grid()
+        axA.legend()
+        axA.set_ylabel("Trop. ties (mm)")
+        axA.set_xlabel("Time")
+        axA.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+        
+        if analy_num_obs:
+            if len(epo_plt) != len(df.num_obs_ref):
+                print("No plot number of observations")
+                fig.delaxes(axC)
+            else:
+                axC.plot(epo_plt,df.num_obs_ref,marker="P",linestyle="--",label="Num obs. Ref sta")
+                axC.plot(epo_plt,df.num_obs_rov,marker="*",linestyle="-.",label="Num obs. Rov sta")
+                axC.grid()
+                axC.legend()
+                axC.set_ylabel("Num Obs.")
+                axC.set_xlabel("Time")
+                axC.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+    
+    plt.tight_layout()
+    plt.suptitle("Total delay ties of " + ref_sta + "-" + rov_sta)
+    if savePlot:
+        export_ts_figure_pdf(fig,filePath,fileName,True)
+    
+    plt.show()
+    
+    return None       
+        
+##########################################################################################    
 
 #def stations_in_sinex_multi(sinex_path_list):
 #    """
@@ -6020,7 +6405,7 @@ def export_ts_figure_pdf(fig,export_path,filename,close=False):
     return None
 
 def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
-                   plot_B = False):
+                   plot_B = False,close_fig_after_export=True):
     """ Very beta ...
         to be implemented : merge w/ the export_figure_pdf fct """
     # plot A avec les barres de sigma
@@ -6043,7 +6428,8 @@ def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
         f.savefig(export_file,
                   papertype='a4',format=typ)
         print("INFO : plot exported in " , export_file)
-    plt.close(f)
+    if close_fig_after_export:
+        plt.close(f)
 
     # plot B avec une droite de regression
     if plot_B:
@@ -6063,7 +6449,8 @@ def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
             f.savefig(export_file,
                       papertype='a4',format=typ)
         print("INFO : plot exported in " , export_file)
-        plt.close(f)
+        if close_fig_after_export:            
+            plt.close(f)
     return None
 
 
@@ -6619,7 +7006,14 @@ def interpolator_light(T,X,Y,Z):
 
     return IX , IY , IZ
 
+def interpolator_with_extrapolated(T,X,Y,Z):
+    from scipy.interpolate import interp1d
 
+    IX = interp1d(T,X,bounds_error=False,fill_value="extrapolate")
+    IY = interp1d(T,Y,bounds_error=False,fill_value="extrapolate")
+    IZ = interp1d(T,Z,bounds_error=False,fill_value="extrapolate")
+
+    return IX , IY , IZ
 
 
 
