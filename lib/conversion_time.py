@@ -131,6 +131,34 @@ def tgipsy2dt(tin):
 
     return tout
 
+def numpy_datetime2dt(npdtin):
+    """
+    Time conversion
+    
+    Numpy Datetime => Datetime
+
+    Parameters
+    ----------
+    npdtin : np.datetime64 or list/numpy.array of np.datetime64 
+        Numpy Datetime.  Can handle several time in a list.
+                
+    Returns
+    -------
+    python_datetime : datetime or list/numpy.array of datetime
+        Converted Datetime(s)
+        
+    Source
+    ------
+        https://stackoverflow.com/questions/29753060/how-to-convert-numpy-datetime64-into-datetime/29755657
+    """
+    if cnv_gen.is_iterable(npdtin):
+        return [numpy_datetime2dt(e) for e in npdtin]
+    else:
+        python_datetime = npdtin.astype('M8[ms]').astype('O') 
+    return python_datetime
+
+
+
 def matlab_time2dt(matlab_datenum):
     """
     Time conversion
@@ -798,6 +826,20 @@ def gpstime2dt(gpsweek,gpsdow_or_seconds,dow_input = True):
         final_time = dt.datetime(final_time.year, final_time.month, final_time.day)
 
     return final_time
+
+
+def gpsweek_decimal2dt(gpsweekdec_in):
+    if cnv_gen.is_iterable(gpsweekdec_in):
+        return [gpsweek_decimal2dt(e) for e in gpsweekdec_in]
+    else:
+        week_floor    = np.floor(gpsweekdec_in)
+        week_dec_part = gpsweekdec_in - week_floor 
+        
+        dt_out = gpstime2dt(week_floor,week_dec_part * 7)
+        return dt_out
+    
+
+
 
 def dt_gpstime2dt_utc(dtgpsin,out_array=False):
     """

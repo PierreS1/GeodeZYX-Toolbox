@@ -1963,6 +1963,9 @@ def read_combi_sum_exclu(sum_file,return_as_df=True,
 
 def read_combi_clk_rms(sum_file,return_as_df=True,
                        clk_ref_cen_gal = "com"):
+    """
+    based on : read_good_clk_rms_one
+    """
     
     strt = " RESULTS OF FINAL WEIGHTED COMBINATION"
     end  = " CLK_REF_CEN_GAL: " + clk_ref_cen_gal
@@ -1974,7 +1977,6 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
     Lres = [e for e in L if re.search("^ [a-z]{3} \|",e)]
     
     Lres_splited = [e.split() for e in Lres]
-    
     
     filnam = os.path.basename(sum_file)
     if "log" in filnam:
@@ -2000,7 +2002,7 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
         return pd.DataFrame(rms_dict,index=[tdt])
     else:
         return tdt,rms_dict
-
+    
 
 def read_combi_clk_rms_full_table(path_in):
     """
@@ -2055,6 +2057,8 @@ def read_combi_REPORT(Path_list):
     DF = pd.DataFrame(STK,columns=("epoch","PRN_str","CONST","PRN","AC"))
 
     return DF
+
+
 
 
 def read_gins(filein,kineorstatic='kine',flh_in_rad=True,
