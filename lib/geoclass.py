@@ -1719,7 +1719,7 @@ def read_epos_sta_coords_multi(filein_list,return_dict = True):
     statname_stk = []
     
     for fil in filein_list:
-        Points_daily_list = read_epos_sta_coords_mono(fil)
+        Points_daily_list = read_epos_sta_coords_mono(fil,return_df=False)
         Points_list   = Points_list + Points_daily_list
         statname_stk  = statname_stk + [e.name for e in Points_daily_list]
         
@@ -3722,6 +3722,102 @@ def sp3_decimate(file_in,file_out,step=15):
             Fout.write(l)
     
     return file_out
+
+
+
+
+def write_sp3(SP3_DF_in , outpath):
+    """
+    Write DOCSTRING
+    """
+    ################## MAIN DATA
+    LinesStk = []
+    
+    EpochList = SP3_DF_in["epoch"].unique()
+
+    for epoc in EpochList:
+        SP3epoc   = pd.DataFrame(SP3_DF_in[SP3_DF_in["epoch"] == epoc])
+        SP3epoc.sort_values("sat",inplace=True)
+        timestamp = geok.dt2sp3_timestamp(numpy_dt2dt(epoc)) + "\n"
+    
+        LinesStk.append(timestamp)
+    
+        linefmt = "P{:}{:14.6f}{:14.6f}{:14.6f}{:14.6f}\n"
+    
+    
+        for ilin , lin in SP3epoc.iterrows():
+            line_out = linefmt.format(lin["sat"],lin["x"],lin["y"],lin["z"],lin["clk"])
+        
+            LinesStk.append(line_out)
+
+
+
+    ################## HEADER   
+    ######### SATELLITE LIST
+    SatList =  sorted(SP3_DF_in["sat"].unique())
+    
+    Satline_stk   = []
+    Sigmaline_stk = []
+    
+    for i in range(5):
+        SatLine = SatList[17*i:17*(i+1)]
+        if len(SatLine) < 17:
+            complem = " 00" * (17 - len(SatLine))
+        else:
+            complem = ""
+         
+        if i == 0:
+            nbsat4line = len(SatList)
+        else:
+            nbsat4line = ''
+            
+        satline = "+  {:3}   ".format(nbsat4line) + "".join(SatLine) + complem + "\n"
+        sigmaline = "++         0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n"
+        
+        Satline_stk.append(satline)
+        Sigmaline_stk.append(sigmaline)
+        
+        
+    ######### SATELLITE LIST
+    start_dt = geok.numpy_dt2dt(EpochList.min())
+    
+    header_line1 = "#cP" + geok.dt2sp3_timestamp(start_dt,False) + "     {:3}".format(len(EpochList)) + "   u+U IGSXX FIT  XXX\n"
+    
+    delta_epoch = int(gf.most_common(np.diff(EpochList) * 10**-9))
+    MJD = int(geok.dt2MJD(start_dt))
+    gps_wwww , gps_sec = geok.dt2gpstime(start_dt,False)
+    
+    header_line2 = "## {:4} {:15.8f} {:14.8f} {:5} 0.0000000000000\n".format(gps_wwww,gps_sec,delta_epoch,MJD)
+
+
+    ######### HEADER BOTTOM
+    header_bottom = """%c G  cc GPS ccc cccc cccc cccc cccc ccccc ccccc ccccc ccccc
+%c cc cc ccc ccc cccc cccc cccc cccc ccccc ccccc ccccc ccccc                 
+%f  1.2500000  1.025000000  0.00000000000  0.000000000000000
+%f  0.0000000  0.000000000  0.00000000000  0.000000000000000
+%i    0    0    0    0      0      0      0      0         0
+%i    0    0    0    0      0      0      0      0         0
+/* PCV:IGSXX_XXXX OL/AL:FESXXXX  NONE     YN CLK:CoN ORB:CoN
+/*     GeodeZYX Toolbox Output                              
+/*                                                                          
+/*                                                          
+"""
+    
+
+    ################## FINAL STACK   
+    
+    FinalLinesStk = []
+    
+    FinalLinesStk.append(header_line1)
+    FinalLinesStk.append(header_line2)
+    FinalLinesStk = FinalLinesStk + Satline_stk + Sigmaline_stk
+    FinalLinesStk.append(header_bottom)
+    FinalLinesStk = FinalLinesStk + LinesStk + ["EOF"]
+    
+    FinalStr = "".join(FinalLinesStk)
+    
+    F = open(outpath,"w+")
+    F.write(FinalStr)
 
 def clk_decimate(file_in,file_out,step=5):
     

@@ -1314,7 +1314,7 @@ def datestr_sinex_2_dt(datestrin):
     
     SINEX time format => Python's Datetime 
     
-    SINEX time format : 'YY:DDD:SSSSS'
+    SINEX time format : 'YY:DDD:SSSSS' or 'YYYY:DDD:SSSSS'
     
     Parameters
     ----------
@@ -1335,21 +1335,23 @@ def datestr_sinex_2_dt(datestrin):
             datestr_list = list(datestrin)
             datestr_list.insert(2,":")
             datestrin = "".join(datestr_list)
-            
-    
-        if datestrin == '00:000:00000':
+        elif '00:000:00000' in datestrin:
             return dt.datetime(1970,1,1)
     
         dateint = [int(e) for e in datestrin.split(':')]
         yr = dateint[0]
         doy = dateint[1]
         sec = dateint[2]
-    
-        if yr > 50:
-            year = 1900 + yr
+        
+        ## case for year with only 2 digits
+        if re.match("[0-9]{2}:[0-9]{3}:[0-9]{5}",datestrin):            
+            if yr > 50:
+                year = 1900 + yr
+            else:
+                year = 2000 + yr
         else:
-            year = 2000 + yr
-    
+            year = yr
+        
         return doy2dt(year,doy,seconds=sec)
 
 
@@ -1407,6 +1409,58 @@ def datestr_gins_filename_2_dt(datestrin):
             year = 2000 + yr
     
         return dt.datetime(year,mm,dd,hh,mmin,ss)
+
+
+def dt2sp3_timestamp(dtin,start_with_star=True):
+    """
+    Time conversion
+    
+    Python's Datetime => SP3 Timestamp
+    e.g. 
+    
+    *  2000  5 28  0  0  0.00000000
+    """
+    yyyy = dtin.year
+    mm   = dtin.month
+    dd   = dtin.day
+    hh   = dtin.hour
+    mi   = dtin.minute
+    sec  = dtin.second
+    
+    if start_with_star:
+        strt = "*  "
+    else:
+        strt = ""
+        
+    strout = strt + "{:4} {:2d} {:2d} {:2d} {:2d} {:11.8f}".format(yyyy,mm,dd,hh,mi,sec)
+    return strout
+
+def numpy_dt2dt(numpy_dt_in):
+    """
+    Time conversion
+
+    numpy datetime64 object => Python's Datetime
+    
+    Parameters
+    ----------
+    numpy_dt_in : numpy datetime64 object
+        numpy datetime64 object
+
+    Returns
+    -------
+    dt : datetime
+        Datetime
+              
+    source
+    ------
+    
+    https://gist.github.com/blaylockbk/1677b446bc741ee2db3e943ab7e4cabd
+    """
+    timestamp = ((numpy_dt_in - np.datetime64('1970-01-01T00:00:00'))
+                 / np.timedelta64(1, 's'))
+    return dt.datetime.utcfromtimestamp(timestamp)
+
+
 
 
 #### LEAP SECONDS MANAGEMENT
