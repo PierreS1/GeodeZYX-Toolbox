@@ -3779,7 +3779,6 @@ def write_sp3(SP3_DF_in , outpath):
 
     for i in range(5):
         SatLine = SatList[17*i:17*(i+1)]
-        print(SatList,SatLine)
         if len(SatLine) < 17:
             complem = " 00" * (17 - len(SatLine))
         else:
@@ -3803,10 +3802,12 @@ def write_sp3(SP3_DF_in , outpath):
     header_line1 = "#cP" + geok.dt2sp3_timestamp(start_dt,False) + "     {:3}".format(len(EpochList)) + "   u+U IGSXX FIT  XXX\n"
 
     delta_epoch = int(genefun.most_common(np.diff(EpochList) * 10**-9))
-    MJD = int(geok.dt2MJD(start_dt))
+    MJD  = geok.dt2MJD(start_dt)
+    MJD_int = int(np.floor(MJD))
+    MJD_dec = MJD - MJD_int
     gps_wwww , gps_sec = geok.dt2gpstime(start_dt,False)
 
-    header_line2 = "## {:4} {:15.8f} {:14.8f} {:5} 0.0000000000000\n".format(gps_wwww,gps_sec,delta_epoch,MJD)
+    header_line2 = "## {:4} {:15.8f} {:14.8f} {:5} {:15.13f}\n".format(gps_wwww,gps_sec,delta_epoch,MJD_int,MJD_dec)
 
 
     ######### HEADER BOTTOM
