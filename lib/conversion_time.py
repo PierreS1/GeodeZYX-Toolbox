@@ -706,7 +706,6 @@ def dt2gpstime(dtin,dayinweek=True,inp_ref="utc"):
                                           dtin.minute,dtin.second)
         
         utc_offset = find_leapsecond(dtin)
-        print(utc_offset)
 
         if inp_ref == "utc":
             ### utc : utc2gpstime did the job
