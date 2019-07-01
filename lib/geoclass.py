@@ -3736,14 +3736,14 @@ def write_sp3(SP3_DF_in , outpath):
 
     SP3_DF_in.sort_values(["epoch","sat"],inplace=True)
 
-    EpochList = sorted(SP3_DF_in["epoch"].unique())
-    SatList =  sorted(SP3_DF_in["sat"].unique())
-
-
+    EpochList  = sorted(SP3_DF_in["epoch"].unique())
+    SatList    = sorted(SP3_DF_in["sat"].unique())
+    SatListSet = set(SatList)
 
     for epoc in EpochList:
         SP3epoc   = pd.DataFrame(SP3_DF_in[SP3_DF_in["epoch"] == epoc])
-
+        ## Missing Sat
+        MissingSats = SatListSet.difference(set(SP3epoc["sat"]))
 
 
         SP3epoc.sort_values("sat",inplace=True)
