@@ -3736,7 +3736,7 @@ def write_sp3(SP3_DF_in , outpath):
 
     SP3_DF_in.sort_values(["epoch","sat"],inplace=True)
 
-    EpochList  = sorted(SP3_DF_in["epoch"].unique())
+    EpochList  = SP3_DF_in["epoch"].unique()
     SatList    = sorted(SP3_DF_in["sat"].unique())
     SatListSet = set(SatList)
 
@@ -3744,7 +3744,17 @@ def write_sp3(SP3_DF_in , outpath):
         SP3epoc   = pd.DataFrame(SP3_DF_in[SP3_DF_in["epoch"] == epoc])
         ## Missing Sat
         MissingSats = SatListSet.difference(set(SP3epoc["sat"]))
-
+        
+        for miss_sat in MissingSats:
+            miss_line = SP3epoc.iloc[0].copy()
+            miss_line["sat"]   = miss_sat
+            miss_line["const"] = miss_sat[0]
+            miss_line["x"]     = 0.000000
+            miss_line["y"]     = 0.000000
+            miss_line["z"]     = 0.000000
+            miss_line["clk"]   = 999999.999999
+            
+            SP3epoc = SP3epoc.append(miss_line)
 
         SP3epoc.sort_values("sat",inplace=True)
         timestamp = geok.dt2sp3_timestamp(geok.numpy_dt2dt(epoc)) + "\n"
@@ -3769,6 +3779,7 @@ def write_sp3(SP3_DF_in , outpath):
 
     for i in range(5):
         SatLine = SatList[17*i:17*(i+1)]
+        print(SatList,SatLine)
         if len(SatLine) < 17:
             complem = " 00" * (17 - len(SatLine))
         else:
