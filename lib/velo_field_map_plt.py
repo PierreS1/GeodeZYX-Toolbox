@@ -103,14 +103,17 @@ def draw_map(station_etude,latm,latM,lonm,lonM,path,
              name_stats_font_size=8,
              name_stats_offset=(0.005,0.01),
              shorten_oversized_arrows=True,
-             exclude_points_out_of_range = True):
+             exclude_points_out_of_range = True,
+             adjust_text=False,
+             pixels_hires_backgrnd=2000,
+             draw_borders=True,
+             full_return=False):
     """
     """
     
     nstation = len(station_etude)
     fig,ax=plt.subplots(figsize=(7,8))  
      
-    
     if incvn_ITRF is None:
         incvn_ITRF = np.zeros(len(station_etude))
     if incve_ITRF is None:
@@ -127,12 +130,15 @@ def draw_map(station_etude,latm,latM,lonm,lonM,path,
                llcrnrlon = lonm, urcrnrlon = lonM, lat_ts=-20, 
                resolution=resolution,
                area_thresh = 1,epsg=3395)
-    m.drawcoastlines(linewidth=0.25)    
-    m.drawcountries()
-    m.drawstates()
+    
+    if draw_borders:
+        m.drawcoastlines(linewidth=0.25)    
+        m.drawcountries()
+        m.drawstates()
 
     if plot_topo:
-        m.arcgisimage(service='World_Shaded_Relief', xpixels = 2000, verbose= True)
+        m.arcgisimage(service='World_Shaded_Relief', 
+                      xpixels = pixels_hires_backgrnd, verbose= True)
     else:
         m.drawmapboundary(fill_color='#97B6E1')
         m.fillcontinents(color='#EFEFDB', lake_color='#97B6E1',zorder=1)
@@ -164,6 +170,7 @@ def draw_map(station_etude,latm,latM,lonm,lonM,path,
     all_posy_proj=[0]*nstation
     for i in range(nstation):
           all_posx_proj[i],all_posy_proj[i] = m(all_pos[i][1],all_pos[i][0]) #positions xy des stations converties a la projection de la carte  [m]         
+          print(i,all_posx_proj[i],all_posy_proj[i])
           m.plot(all_posx_proj[i],all_posy_proj[i],'xkcd:black',marker='.',linestyle='none',markersize=4,lw=4,zorder=20) #point rouge à la station, zorder indique l'ordre vertical de dessin sur la carte, les nb elevés sont dessinés les plus hauts
 #          plt.text(all_posx_proj[i], all_posy_proj[i], station_etude[i], size=10,ha="center", va="center",bbox=dict(boxstyle="round",
 #                           ec=(1., 0.5, 0.5),
@@ -241,6 +248,7 @@ def draw_map(station_etude,latm,latM,lonm,lonM,path,
             
     else:# Champ de vitesses verticales ITRF	   
         ############### PLOT FLECHES
+        Text = []
         for i in range(nstation): 
             
             ######### Exclude point if not in range
@@ -305,10 +313,13 @@ def draw_map(station_etude,latm,latM,lonm,lonM,path,
                 offset_x_ok , offset_y_ok = gf.axis_data_coords_sys_transform(ax,
                                                                               name_stats_offset[0],
                                                                               name_stats_offset[1])
-                plt.text(all_posx_proj[i] + offset_x_ok,
+                
+                
+                Text.append(plt.text(all_posx_proj[i] + offset_x_ok,
                          all_posy_proj[i] + offset_y_ok,
-                         station_etude[i], fontsize=name_stats_font_size)           
-        
+                         station_etude[i], fontsize=name_stats_font_size))
+                
+
 
             ############### PLOT ELLIPSES
             # angle de l'ellipse dépend de la direction du vecteur vitesse            
@@ -373,10 +384,21 @@ def draw_map(station_etude,latm,latM,lonm,lonM,path,
         ells_legend.set_zorder(1)  
 
     ############### FINITION
+    
+    for T in Text:   #Put label in front
+        T.set_zorder(100)
+
+    if adjust_text:
+        from adjustText import adjust_text
+        adjust_text(Text,on_basemap=True) #arrowprops=dict(arrowstyle='->', color='red')
+        
 
     plt.tight_layout() 
         
-    return fig , ax , m
+    if full_return:
+        return fig , ax , m , Text
+    else:
+        return fig , ax , m , Text
 
 
 #
