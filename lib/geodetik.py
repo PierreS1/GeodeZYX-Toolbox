@@ -456,6 +456,7 @@ def rinex_lister(path,add_new_names=True):
     return rinexfilelist
 
 
+
 def rinex_timeline(inputlist_or_paths,start = dt.datetime(1980,1,1) ,
                    end = dt.datetime(2099,1,1),use_rinex_lister = True,
                    dots_plot=False,jul_date_plot=False,return_figure=False):
@@ -548,7 +549,7 @@ def rinex_timeline_datadico(inputlist_or_paths,use_rinex_lister = True,
 
     #rinexfilelist = [fil for fil in filelist if re.search( '.*' + softs_runner.rinex_regex() + '$', fil)]
     rinexfilelist_old = [fil for fil in filelist if re.search( softs_runner.rinex_regex() , fil)]
-    rinexfilelist_new = [fil for fil in filelist if re.search( softs_runner.rinex_regex() , fil)]
+    rinexfilelist_new = [fil for fil in filelist if re.search( softs_runner.rinex_regex_new_name() , fil)]
 
     rinexfilelist = rinexfilelist_old + rinexfilelist_new
 
@@ -709,7 +710,7 @@ def timeline_plotter(datadico,start = dt.datetime(1980,1,1) ,
         TGrpAll = genefun.consecutive_groupIt(TMJD,True) # Tuples (start,end) of continue period
 
         for tgrp in TGrpAll:
-            color1 = ''
+            color1 = 'C0'
             color2 = ''
             extra_archive = False
 
@@ -772,7 +773,8 @@ def timeline_plotter(datadico,start = dt.datetime(1980,1,1) ,
         for arcnam , col in colordico_for_main_datadico.items():
             legend_list.append(mlines.Line2D([], [], color=col,
                                                      label=arcnam))
-            plt.legend(handles=legend_list,loc='upper left')
+            plt.legend(handles=legend_list,loc='upper left',ncol=3,
+                       columnspacing=1)
 
 
 #    ax.set_yticks(np.arange(0,len(plotstat_lis)-1),plotstat_lis)
