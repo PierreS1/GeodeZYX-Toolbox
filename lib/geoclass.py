@@ -748,6 +748,12 @@ class TimeSeriePoint:
     def ENUcalc_from_mean_posi(self):
         self.ENUcalc(self.mean_posi())
         return None
+    
+    def ENUcalc_from_median_posi(self):
+        self.ENUcalc(self.mean_posi(meanormed='med'))
+        return None
+
+
 
     def from_uniq_point(self,Point,startdate,enddate,pas=1):
         self.del_data()
@@ -1681,33 +1687,29 @@ def read_epos_sta_coords_mono(filein,return_df=True):
             sVz = float(fields[9])
 
             #### Last useful line for the point, store it
-            point = Point(X,Y,Z,T,"XYZ",sX,sY,sZ,name=namestat)
-            point.anex["Vx"] = sVx
-            point.anex["Vy"] = sVy
-            point.anex["Vz"] = sVz
-            Points_list_stk.append(point)
+            if not return_df:
+                point = Point(X,Y,Z,T,"XYZ",sX,sY,sZ,name=namestat)
+                point.anex["Vx"] = sVx
+                point.anex["Vy"] = sVy
+                point.anex["Vz"] = sVz
+                Points_list_stk.append(point)
+            else:
+                #### And store for the DataFrame
+                tup_4_DF = (namestat,numstat,tecto_plate,
+                            MJD_ref,MJD_strt,MJD_end,
+                            X,Y,Z,sX,sY,sZ,
+                            Vx,Vy,Vz,sVx,sVy,sVz)
 
-            #### And store for the DataFrame
-            tup_4_DF = (namestat,numstat,tecto_plate,
-                        MJD_ref,MJD_strt,MJD_end,
-                        X,Y,Z,sX,sY,sZ,
-                        Vx,Vy,Vz,sVx,sVy,sVz)
+                Lines_4_DF_stk.append(tup_4_DF)
 
-
-
-            Lines_4_DF_stk.append(tup_4_DF)
-
-
+    if return_df:
         columns = ("site","site_num","tecto_plate",
-                   "MJD_ref","MJD_start","MJD_end",
-                   "x","y","z","sx","sy","sz",
-                   "Vx","Vy","Vz","sVx","sVy","sVz")
+           "MJD_ref","MJD_start","MJD_end",
+           "x","y","z","sx","sy","sz",
+           "Vx","Vy","Vz","sVx","sVy","sVz")
 
         DFout = pd.DataFrame(Lines_4_DF_stk,
                      columns=columns)
-
-
-    if return_df:
         return DFout
     else:
         return Points_list_stk
@@ -1719,6 +1721,7 @@ def read_epos_sta_coords_multi(filein_list,return_dict = True):
     statname_stk = []
 
     for fil in filein_list:
+        print(fil)
         Points_daily_list = read_epos_sta_coords_mono(fil,return_df=False)
         Points_list   = Points_list + Points_daily_list
         statname_stk  = statname_stk + [e.name for e in Points_daily_list]
