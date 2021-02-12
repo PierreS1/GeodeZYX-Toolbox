@@ -330,13 +330,13 @@ class TimeSeriePoint:
     def __repr__(self):
         if self.pts == []:
             raise Exception('TS is empty ...')
-        
+
         start = self.startdate()
         end = self.enddate()
         nbday = int((end - start).days + 1.)
-        
+
         ratio = self.nbpts * 100. / nbday
-        
+
         return '{} {} {} {} {} {} {} {:5.2f}{}'.format(self.stat,self.nbpts,'points',
                 start,end,nbday,"nb days", ratio,"%")
 
@@ -412,8 +412,8 @@ class TimeSeriePoint:
             self.i_nomi = np.round(np.min(np.diff(Ttemp)),1)
 
         return self.i_nomi
-    
-    
+
+
     def from_list(self,T,A,B,C,coortype='XYZ',sA=[],sB=[],sC=[]):
         """
         T in datetime
@@ -424,20 +424,20 @@ class TimeSeriePoint:
             sB = np.zeros(len(B))
         if not sC:
             sC = np.zeros(len(C))
-        
+
         for t,a,b,c,sa,sb,sc in zip(T,A,B,C,sA,sB,sC):
             point = Point(a,b,c,t,coortype,sa,sb,sc)
-            
+
             self.add_point(point)
-        
+
         if coortype == "ENU":
             self.boolENU = True
-        
+
         self.sort()
-        
+
         return None
-        
-        
+
+
     def to_list(self,coortype = 'XYZ',specific_output=''):
 
         if coortype == 'XYZ':
@@ -510,7 +510,7 @@ class TimeSeriePoint:
             print("ERR   : unable to get coordinates")
             print("TRICK : check if the given coortype is in the timeserie")
             raise tyer
-            
+
         if coortype == 'ENU':
             Atitle = 'East'
             Btitle = 'North'
@@ -553,12 +553,12 @@ class TimeSeriePoint:
 
         figobj.suptitle(self.stat)
 
-        
+
         if self.name:
             name4plot = self.name[namest:namend]
         else:
             name4plot = self.stat
-        
+
 
         plt.subplot(styleint+1)
         if errbar:
@@ -639,7 +639,7 @@ class TimeSeriePoint:
         if not self.bool_discont:
             print("WARN : pas de discontinuité dans la TS")
             return 0
-        
+
         if type(fig) is int:
             figobj = plt.figure(fig)
         elif type(fig) is Figure:
@@ -647,11 +647,11 @@ class TimeSeriePoint:
 
         for ax in figobj.axes:
             geok.plot_vertical_bar_ax(self.discont,ax,"r")
-        
+
         if self.bool_discont_manu:
             for ax in figobj.axes:
                 geok.plot_vertical_bar_ax(self.discont_manu,ax,"g")
-                        
+
 #        figobj.axes[1]
 #        geok.plot_vertical_bar(self.discont)
 #
@@ -662,42 +662,42 @@ class TimeSeriePoint:
     def discont_manu_click(self,fig=1):
         """
         manual discontinuities are both recorded in the "main" discont list
-        and in a new discont_manu list, 
+        and in a new discont_manu list,
         thus the manual discontinuites can be identified
-        
+
         IMPORTANT : cursor objects (multi , cid)
                     must be stored as global variables like this :
                     multi , cid = tsout.discont_manu_click()
-                    
-                    
+
+
         NOTE : This method was created before point_n_click_plot():
-            this other one is more complete 
+            this other one is more complete
             both has to be merged ASAP !!!!!
 
         """
-        
+
         if type(fig) is int:
             figobj = plt.figure(fig)
         elif type(fig) is Figure:
             figobj = fig
-            
+
         if not self.bool_discont:
             self.discont = []
 
         if not self.bool_discont_manu:
-            self.discont_manu = []        
+            self.discont_manu = []
 
         print("INFO : press SPACE to record a manual discontinuity")
 
-            
+
         def onclick_discont(event):
             ix, iy = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None), event.ydata
-            
+
             print("INFO : discontinuity recorded : " , ix)
             for ax in figobj.axes:
                 geok.plot_vertical_bar_ax([ix],ax,"g")
-#            
-                            
+#
+
             self.bool_discont      = True
             self.bool_discont_manu = True
 
@@ -709,17 +709,17 @@ class TimeSeriePoint:
 
             #figobj.show()
             plt.draw()
-            
+
             return None
-        
+
         multi = MultiCursor(figobj.canvas, figobj.axes , color='k', lw=1)
         cid   = figobj.canvas.mpl_connect('key_press_event', onclick_discont)
-        
+
         return multi , cid
-        
 
 
-        
+
+
 
     def initype(self):
         L = [ pt.initype for pt in self.pts ]
@@ -748,6 +748,12 @@ class TimeSeriePoint:
     def ENUcalc_from_mean_posi(self):
         self.ENUcalc(self.mean_posi())
         return None
+    
+    def ENUcalc_from_median_posi(self):
+        self.ENUcalc(self.mean_posi(meanormed='med'))
+        return None
+
+
 
     def from_uniq_point(self,Point,startdate,enddate,pas=1):
         self.del_data()
@@ -846,10 +852,10 @@ class TimeSeriePoint:
         #special case where only one point
         if self.nbpts == 1:
             return copy.copy(self)
-        
+
         A,B,C,T,sA,sB,sC = self.to_list(coortype=coortype)
-        
-        
+
+
         if meanormed == 'mean':
             Aout = np.nanmean(A)
             Bout = np.nanmean(B)
@@ -1482,11 +1488,11 @@ def read_gins_solution(filein,mode="cinematic"):
     mode = cinematic : retrun a TimeSerie
     mode = static : retrun a point
     """
-    
+
     F = open(filein)
-    
+
     Pts_list_tmp = []
-    
+
     for l in F:
         f = l.split()
 
@@ -1495,7 +1501,7 @@ def read_gins_solution(filein,mode="cinematic"):
                 namestat = f[1]
             else:
                 namestat = f[-1]
-                
+
 
         if l[0] == '#':
             continue
@@ -1513,10 +1519,10 @@ def read_gins_solution(filein,mode="cinematic"):
             sZ =  np.sqrt(float(f[11]))
 
             if "T24:00:00.000" in f[1]: # Manage the special case if we are at the border bw 2 days
-                Txyz = geok.string_date2dt(f[1][:10])  + dt.timedelta(days=+1) + dt.timedelta(seconds=-19) 
-            else:        
+                Txyz = geok.string_date2dt(f[1][:10])  + dt.timedelta(days=+1) + dt.timedelta(seconds=-19)
+            else:
                 Txyz = geok.string_date2dt(f[1]) + dt.timedelta(seconds=-19)
-            
+
             point = Point(X,Y,Z,Txyz,coordstype,sX,sY,sZ,name=namestat)
 
             point.anex['sdXY'] = float(f[10])
@@ -1543,62 +1549,62 @@ def read_gins_solution(filein,mode="cinematic"):
             point.anex['sdLH'] = float(f[12])
 
             Pts_list_tmp.append(point)
-    
-    #### End of reading, export 
+
+    #### End of reading, export
     if not Pts_list_tmp:
         print("WARN : no point found in :")
         print(filein)
         print("returns None")
         return None
-    
+
     if mode == "cinematic":
-        tsout = TimeSeriePoint()  
+        tsout = TimeSeriePoint()
         for point in Pts_list_tmp:
             tsout.add_point(point)
         tsout.meta_set(filein,namestat)
         return tsout
-    
+
     elif mode == "static":
         pt_out = Pts_list_tmp[0]
         return pt_out
-    
-    
+
+
 def read_gins_solution_multi(filein_list,return_dict = True):
-    
+
     filein_list  = sorted(filein_list)
     Points_list  = []
     statname_stk = []
-    
+
     for fil in filein_list:
         point_daily   = read_gins_solution(fil,mode="static")
         if not point_daily:
             continue
         Points_list.append(point_daily)
         statname_stk.append(point_daily.name)
-        
+
     statname_uniq = sorted(list(set(statname_stk)))
-    
+
     ts_dict = dict()
-        
+
     for point in Points_list:
         if not point.name in ts_dict.keys():
             ts_dict[point.name] = TimeSeriePoint(stat=point.name)
         ts_dict[point.name].add_point(point)
-        
+
     if return_dict:
         return ts_dict
     else:
         ts_list = []
         for k , val in ts_dict.items():
-            ts_list.append(val) 
+            ts_list.append(val)
         return ts_list
-        
+
 
 def read_epos_sta_kinematics(filein):
     """
     read an EPOS kinematic solutions
     """
-    
+
     F = open(filein)
     Lines_4_DF_stk = []
     for l in F:
@@ -1610,46 +1616,46 @@ def read_epos_sta_kinematics(filein):
             numstat = int(fields[1])
             MJD_epo = float(fields[3])
             numobs = int(fields[4])
-            
+
             X = float(fields[6])
             Y = float(fields[7])
             Z = float(fields[8])
             sX = float(fields[10])
             sY = float(fields[11])
             sZ = float(fields[12])
-            
+
             N = float(fields[14])
             E = float(fields[15])
             U = float(fields[16])
             sN = float(fields[18])
             sE = float(fields[19])
             sU = float(fields[20])
-            
+
             tup_4_df = (namstat,numstat,MJD_epo,numobs,X,Y,Z,sX,sY,sZ,
                         N,E,U,sN,sE,sU)
             Lines_4_DF_stk.append(tup_4_df)
-            
+
     columns = ("site","site_num",
                    "MJD_epo","numobs",
                    "x","y","z","sx","sy","sz",
                    "N","E","U","sN","sE","sU")
-    
+
     DFout = pd.DataFrame(Lines_4_DF_stk,
                      columns=columns)
     return DFout
-    
+
 def read_epos_sta_coords_mono(filein,return_df=True):
     """
     read an EPOS's YYYY_DDD_XX_sta_coordinates coordinates files
     and return a list of Points objects
-    
+
     ... TBC ...
     """
     F = open(filein)
-    
+
     Points_list_stk = []
     Lines_4_DF_stk = []
-    
+
     for l in F:
         fields = l.split()
         if l[0] != " ":
@@ -1657,118 +1663,115 @@ def read_epos_sta_coords_mono(filein,return_df=True):
         if "SITE" in fields[0]:
             namestat = fields[8]
             numstat  = int(fields[2])
-            tecto_plate = fields[4]     
+            tecto_plate = fields[4]
             MJD_ref  = int(fields[5])
             MJD_strt = int(fields[6])
             MJD_end  = int(fields[7])
             MJD_mid = np.mean([MJD_strt , MJD_end])
             T = geok.MJD2dt(MJD_mid)
-            
+
         if "POS_VEL:XYZ" in fields[0]:
             X  = float(fields[4])
             Y  = float(fields[5])
             Z  = float(fields[6])
             Vx = float(fields[7])
             Vy = float(fields[8])
-            Vz = float(fields[9])    
-            
+            Vz = float(fields[9])
+
         if "SIG_PV_XYZ" in fields[0]:
             sX  = float(fields[4].replace("D","E"))
             sY  = float(fields[5].replace("D","E"))
             sZ  = float(fields[6].replace("D","E"))
             sVx = float(fields[7])
             sVy = float(fields[8])
-            sVz = float(fields[9])  
-            
+            sVz = float(fields[9])
+
             #### Last useful line for the point, store it
-            point = Point(X,Y,Z,T,"XYZ",sX,sY,sZ,name=namestat)
-            point.anex["Vx"] = sVx
-            point.anex["Vy"] = sVy
-            point.anex["Vz"] = sVz
-            Points_list_stk.append(point)
+            if not return_df:
+                point = Point(X,Y,Z,T,"XYZ",sX,sY,sZ,name=namestat)
+                point.anex["Vx"] = sVx
+                point.anex["Vy"] = sVy
+                point.anex["Vz"] = sVz
+                Points_list_stk.append(point)
+            else:
+                #### And store for the DataFrame
+                tup_4_DF = (namestat,numstat,tecto_plate,
+                            MJD_ref,MJD_strt,MJD_end,
+                            X,Y,Z,sX,sY,sZ,
+                            Vx,Vy,Vz,sVx,sVy,sVz)
 
-            #### And store for the DataFrame
-            tup_4_DF = (namestat,numstat,tecto_plate,
-                        MJD_ref,MJD_strt,MJD_end,
-                        X,Y,Z,sX,sY,sZ,
-                        Vx,Vy,Vz,sVx,sVy,sVz)
-            
+                Lines_4_DF_stk.append(tup_4_DF)
 
-            
-            Lines_4_DF_stk.append(tup_4_DF)
-
-
+    if return_df:
         columns = ("site","site_num","tecto_plate",
-                   "MJD_ref","MJD_start","MJD_end",
-                   "x","y","z","sx","sy","sz",
-                   "Vx","Vy","Vz","sVx","sVy","sVz")
-        
+           "MJD_ref","MJD_start","MJD_end",
+           "x","y","z","sx","sy","sz",
+           "Vx","Vy","Vz","sVx","sVy","sVz")
+
         DFout = pd.DataFrame(Lines_4_DF_stk,
                      columns=columns)
-        
-        
-    if return_df:
         return DFout
     else:
-        return Points_list_stk    
-        
+        return Points_list_stk
+
 def read_epos_sta_coords_multi(filein_list,return_dict = True):
-    
+
     filein_list  = sorted(filein_list)
     Points_list  = []
     statname_stk = []
-    
+
     for fil in filein_list:
-        Points_daily_list = read_epos_sta_coords_mono(fil)
+        print(fil)
+        Points_daily_list = read_epos_sta_coords_mono(fil,return_df=False)
         Points_list   = Points_list + Points_daily_list
         statname_stk  = statname_stk + [e.name for e in Points_daily_list]
-        
+
     statname_uniq = sorted(list(set(statname_stk)))
-    
+
     ts_dict = dict()
-        
+
     for point in Points_list:
         if not point.name in ts_dict.keys():
             ts_dict[point.name] = TimeSeriePoint(stat=point.name)
         ts_dict[point.name].add_point(point)
-        
+
     if return_dict:
         return ts_dict
     else:
         ts_list = []
         for k , val in ts_dict.items():
-            ts_list.append(val) 
+            ts_list.append(val)
         return ts_list
-    
-    
+
+
 def read_epos_slv_times(p):
     L = genefun.extract_text_between_elements_2(p,"\+sum_times/estimates","\-sum_times/estimates")
-    
-    
+
+
     Lgood = []
     for l in L[1:-1]:
         if "EPOCHE" in l:
             cur_epoc_line = l
             cur_epoc_f = cur_epoc_line.split()
             cur_epoc   = geok.MJD2dt(int(cur_epoc_f[1])) +  dt.timedelta(seconds=int(86400*float(cur_epoc_f[2])))
-            
+
         if re.match("^   [0-9]{4}.*",l):
             Lgood.append([cur_epoc] + [float(e) for e in l.split()])
-            
-            
+
+
     DF = pd.DataFrame(Lgood,columns=["epoch","stat","offset","offset_sig"])
-    
+
     DF["stat"] = DF["stat"].astype('int')
-    
+
     return DF
 
 
-    
+
 def write_epos_sta_coords(DF_in,file_out):
-    
+
     DF_work = DF_in.sort_values(["site","MJD_start"])
 
-    
+
     Stat_lines_blk_stk = []
 
     generic_header = """+info
@@ -1784,71 +1787,71 @@ def write_epos_sta_coords(DF_in,file_out):
                                            genefun.most_common(DF_work["MJD_ref"]))
 
     Stat_lines_blk_stk.append(generic_header)
-    
+
     Stat_lines_blk_stk.append("+station_coordinates")
-    
+
     for site in DF_work["site"].unique():
-            
+
         Stat_lines_blk_stk.append("*------------------------- ---- ----- -beg- -end- -**- ------------------------------------------------\n*")
-    
+
         for i_l ,(_ , l) in enumerate(DF_work[DF_work["site"] == site].iterrows()):
-        
-            line_site_fmt = " SITE            m {:4d}  {:1d} {:} {:5d} {:5d} {:5d} {:}   A  0      LOG_CAR       LOG_CAR" 
-            line_posi_fmt = " POS_VEL:XYZ     m {:4d}  {:1d} {:+15.4f} {:+15.4f} {:+15.4f}      {:+6.4f} {:+6.4f} {:+6.4f}" 
-            line_velo_fmt = " SIG_PV_XYZ      m {:4d}  {:1d} {:+15.4f} {:+15.4f} {:+15.4f}      {:+6.4f} {:+6.4f} {:+6.4f}" 
-            
+
+            line_site_fmt = " SITE            m {:4d}  {:1d} {:} {:5d} {:5d} {:5d} {:}   A  0      LOG_CAR       LOG_CAR"
+            line_posi_fmt = " POS_VEL:XYZ     m {:4d}  {:1d} {:+15.4f} {:+15.4f} {:+15.4f}      {:+6.4f} {:+6.4f} {:+6.4f}"
+            line_velo_fmt = " SIG_PV_XYZ      m {:4d}  {:1d} {:+15.4f} {:+15.4f} {:+15.4f}      {:+6.4f} {:+6.4f} {:+6.4f}"
+
             line_site = line_site_fmt.format(l["site_num"],i_l,l["tecto_plate"].upper(), l["MJD_ref"],l["MJD_start"],l["MJD_end"],l["site"])
             line_posi = line_posi_fmt.format(l["site_num"],i_l,l["x"],l["y"], l["z"],l["sx"],l["sy"],l["sz"])
             line_velo = line_velo_fmt.format(l["site_num"],i_l,l["Vx"],l["Vy"], l["Vz"],l["sVx"],l["sVy"],l["sVz"])
-            
+
             Stat_lines_blk_stk.append(line_site)
             Stat_lines_blk_stk.append(line_posi)
             Stat_lines_blk_stk.append(line_velo)
             Stat_lines_blk_stk.append("*")
-    
+
 
     Stat_lines_blk_stk.append("-station_coordinates")
 
-            
+
     final_str = "\n".join(Stat_lines_blk_stk)
-    
+
 
     with open(file_out,"w+") as f:
         f.write(final_str)
-    
+
     return final_str
 
 
 def prn_int_2_prn_str(prn_int,full_out=False):
     """
     for read_combi_sum_full
-    
+
     if full_out : return e.g. "G04","G",4
     """
     const = "X"
 
     prn_int = int(prn_int)
-    
+
     prn_int_out = prn_int
-    
+
     if prn_int >= 400:
         prn_int_out = prn_int - 400
         const = "J"
     elif 300 <= prn_int < 400:
         prn_int_out = prn_int - 300
-        const = "C"    
+        const = "C"
     elif 200 <= prn_int < 300:
         prn_int_out = prn_int - 200
-        const = "E"        
+        const = "E"
     elif 100 <= prn_int < 200:
         prn_int_out = prn_int - 100
         const = "R"
     else:
         prn_int_out = prn_int
         const = "G"
-    
+
     prn_str = const + str(prn_int_out).zfill(2)
-    
+
     if not full_out:
         return prn_str
     else:
@@ -1859,27 +1862,27 @@ def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
     Vals_stk = []
 
     for l in open(sum_full_file):
-        
+
         F = l.split()
         if "|" in F:
             F.remove("|")
-    
+
         ### Find date line
         if "MJD:" in l:
             date_line  = l
-        
+
         ### Skip useless lines
         if not "|" in l or "------" in l:
             continue
-        
+
         ### Find AC list
         if "PRN" in l:
             ACs_list  = F
             ACs_list.append("RMS_sat")
             ACs_list.append("PRN_str")
             ACs_list.append("CONST")
-    
-    
+
+
         elif F[0].isnumeric():
             Fout = [float(f) for f in F]
             Fout[0] = int(Fout[0])
@@ -1888,7 +1891,7 @@ def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
             Fout.append(Fout[-1][0])
 
             Vals_stk.append(Fout)
-        
+
         elif "RMS" in F[0] and RMS_lines_output:
             Fout = [float(f) for f in F[1:]]
             Fout.append(np.nan)
@@ -1898,34 +1901,34 @@ def read_combi_sum_full(sum_full_file,RMS_lines_output=True,
             Fout.append(None)
 
             Vals_stk.append(Fout)
-        
-    
+
+
     DF = pd.DataFrame(Vals_stk,columns=ACs_list)
-    
+
     ### Date management
     mjd = float(date_line.split("MJD:")[1].split()[0])
     date_dt = geok.MJD2dt(mjd)
-    
+
     DF.date_mjd = mjd
     DF.date_dt  = date_dt
     DF.date_gps = genefun.join_improved("",geok.dt2gpstime(date_dt))
-    
+
     if set_PRN_as_index:
         DF.set_index("PRN_str",inplace=True)
-    
+
     return DF
 
 
 def read_combi_sum_exclu(sum_file,return_as_df=True,
                          use_intuitive_bool = True):
 
-    
+
     t_dt = geok.sp3name2dt(sum_file)
-    
+
     with open(sum_file) as f:
         cont = f.readlines()
 
-        
+
     excluded_dic = dict()
     useful_ssection = False
     useful_ssection_k = 0
@@ -1933,28 +1936,28 @@ def read_combi_sum_exclu(sum_file,return_as_df=True,
         f = l.split()
         if "---|---" in l and useful_ssection_k < 2:
             useful_ssection = not useful_ssection
-            useful_ssection_k +=1 
+            useful_ssection_k +=1
             continue
-        
+
         if not useful_ssection:
             continue
-        
+
         prn_raw = f[0]
-        
+
         if "X" in prn_raw:
             exclu = True
         else:
             exclu = False
-            
+
         if use_intuitive_bool:
             exclu = not exclu
-            
+
         prn_int = int(f[0].replace("X","").split()[0])
 
         prn_good = prn_int_2_prn_str(prn_int)
-                        
+
         excluded_dic[prn_good] = exclu
-    
+
     if return_as_df:
         return pd.DataFrame(excluded_dic,index=[t_dt])
     else:
@@ -1966,18 +1969,18 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
     """
     based on : read_good_clk_rms_one
     """
-    
+
     strt = " RESULTS OF FINAL WEIGHTED COMBINATION"
     end  = " CLK_REF_CEN_GAL: " + clk_ref_cen_gal
-    
+
     L = genefun.extract_text_between_elements_2(sum_file,strt,end)
-    
+
     L = L[:-2]
-    
+
     Lres = [e for e in L if re.search("^ [a-z]{3} \|",e)]
-    
+
     Lres_splited = [e.split() for e in Lres]
-    
+
     filnam = os.path.basename(sum_file)
     if "log" in filnam:
         week = int(filnam[4:8])
@@ -1986,13 +1989,13 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
     elif "cls" in filnam:
         week = int(filnam[3:7])
         dow  = int(filnam[7])
-        tdt = geok.gpstime2dt(week,dow)        
-    
+        tdt = geok.gpstime2dt(week,dow)
+
     rms_dict = dict()
-    
+
     for e in Lres_splited:
         try:
-            rms_dict[e[0]] = int(e[-4]) 
+            rms_dict[e[0]] = int(e[-4])
         except:
             print("WARN : ", e[-4],"not handeled")
             print("replaced with NaN")
@@ -2002,7 +2005,7 @@ def read_combi_clk_rms(sum_file,return_as_df=True,
         return pd.DataFrame(rms_dict,index=[tdt])
     else:
         return tdt,rms_dict
-    
+
 
 def read_combi_clk_rms_full_table(path_in):
     """
@@ -2010,32 +2013,32 @@ def read_combi_clk_rms_full_table(path_in):
     """
     strt = "RMS \(ps\) OF AC CLOCK COMPARED TO COMBINATION"
     end  = "---+---"
-    
+
     Lines = genefun.extract_text_between_elements_2(path_in,strt,end,nth_occur_elt_end=1)
-    
+
     Lines_good = []
-    
+
     for l in Lines[1:]:
         if "---+---" in l or "bad" in l:
             continue
         else:
             Lines_good.append(l)
-            
-    
+
+
     Lines_good = [e.replace("|","") for e in Lines_good]
     Lines_good = [e.replace("         ","  SAT    ") for e in Lines_good]
-    
+
     STR = "".join(Lines_good)
-    
+
     import io
-    
+
     DF = pd.read_table(io.StringIO(STR),
                       na_values = ["-","X",">>>"] ,
                       delim_whitespace = True ,
                       error_bad_lines=False)
-    
+
     DF = DF.set_index("SAT")
-    
+
     return DF
 
 
@@ -2052,8 +2055,8 @@ def read_combi_REPORT(Path_list):
                 STK.append((epoch,prn_str,const , prn_int,"all"))
             if "orb_excl_sat" in l:
                 prn_str , const , prn_int = prn_int_2_prn_str((f[3]),True)
-                STK.append((epoch,prn_str,const , prn_int,f[2]))    
-                
+                STK.append((epoch,prn_str,const , prn_int,f[2]))
+
     DF = pd.DataFrame(STK,columns=("epoch","PRN_str","CONST","PRN","AC"))
 
     return DF
@@ -2407,50 +2410,50 @@ def convert_sp3_clk_2_GINS_clk(sp3_path_in,
                                interpo_30sec = True,
                                return_as_DF = True):
     DF = gcls.read_sp3(sp3_path_in)
-    
+
     Fout = open(clk_gins_out,"w+")
-    
-    def write_GINS_signaletic_elt_clk(dt_in,sv, 
+
+    def write_GINS_signaletic_elt_clk(dt_in,sv,
                                       signaletic_name="MNG",
                                       add_19sec_to_dt_in = True):
         """
         very beta, only for GPS clk
         """
-        
+
         if add_19sec_to_dt_in:
             dt_work = dt_in + dt.timedelta(seconds=19)
         else:
             dt_work = dt_in
-            
+
         jjul = geok.dt2jjulCNES(dt_work)
         sec_in_day = (dt_work - geok.jjulCNES2dt(jjul) ).seconds
-        
+
         #MNG0000000jjjjjcccccnnnn
-        
+
         outstr = "[MNG0000000" + str(jjul) + str(sec_in_day).zfill(5) + "GP" + str(sv).zfill(2) + "]"
-        
+
         return outstr
-    
+
     c = 299792458
-    
+
     if interpo_30sec:
         Epoc_work = []
         Sv_work   = []
-        Clk_work  = []    
-        
+        Clk_work  = []
+
         for sv in sorted(DF["sv"].unique()):
             DFsv = DF[DF["sv"] == sv]
-            
+
             Epoc_inp = np.array(geok.dt2posix(DFsv["epoch"]))
             Clk_inp  = np.array(DFsv["clk"])
-            
+
             Epoc_interp = np.arange(np.min(Epoc_inp),np.max(Epoc_inp),30)
             Epoc_interp_dt = geok.posix2dt(Epoc_interp)
-            
+
             I = interpolate.interp1d(Epoc_inp,Clk_inp)
-            
+
             Clk_interp = I(Epoc_interp)
-            
+
             Sv_work   = Sv_work   + [sv] * len(Epoc_interp)
             Epoc_work = Epoc_work + list(Epoc_interp_dt)
             Clk_work  = Clk_work  + list(Clk_interp)
@@ -2459,27 +2462,27 @@ def convert_sp3_clk_2_GINS_clk(sp3_path_in,
         Epoc_work = DF["epoch"]
         Sv_work   = DF["sv"]
         Clk_work  = DF["clk"]
-    
-    
+
+
     DF_work = pd.DataFrame(list(zip(Epoc_work,Sv_work,Clk_work)),
                             columns=("epoch","sv","clk"))
-    
+
     DF_work.sort_values(["epoch","sv"],inplace=True)
-    
+
     print("tot",DF_work)
-    
+
     for epoc , sv , clk in zip(DF_work["epoch"],DF_work["sv"],DF_work["clk"]):
         signaletik = write_GINS_signaletic_elt_clk(epoc,sv,clk)
-        
+
         str_final = " 0 0 {:}  {:+17.15e} {:+17.15e}\n".format(signaletik,clk* 10**-6 * c,0)
-        
+
         Fout.write(str_final)
-        
+
     if not return_as_DF:
         return clk_gins_out
     else:
         return DF_work
-        
+
 
 
 #def read_gins_kinematic(filein):
@@ -2887,28 +2890,28 @@ def read_nevada(filein,input_coords="enu"):
     if input_coords=="enu":
         for l in envfile:
             f = l.split()
-    
+
             if "site YYMMMDD" in l:
                 continue
             if len(l) == 0:
                 continue
-    
+
             stat = f[0]
-    
+
             T = geok.year_decimal2dt(float(f[2]))
-    
+
             N = float(f[10])
             E = float(f[8])
             U = float(f[12])
-    
+
             sN = float(f[15])
             sE = float(f[14])
             sU = float(f[16])
-    
+
             point = Point(E,N,U,T,'ENU',sE,sN,sU)
-    
+
             #tsout.refENU = Point()
-    
+
             tsout.boolENU = True
             tsout.add_point(point)
 
@@ -2916,31 +2919,31 @@ def read_nevada(filein,input_coords="enu"):
     if input_coords=="xyz":
         for l in envfile:
             f = l.split()
-    
+
             if "site YYMMMDD" in l:
                 continue
             if len(l) == 0:
                 continue
-    
+
             stat = f[0]
-    
+
             T = geok.year_decimal2dt(float(f[2]))
-    
+
             X = float(f[3])
             Y = float(f[4])
             Z = float(f[5])
-    
+
             sX = float(f[6])
             sY = float(f[7])
             sZ = float(f[8])
-    
+
             point = Point(X,Y,Z,T,'XYZ',sX,sY,sZ)
 
             point.anex['Rxy'] = float(f[9])
             point.anex['Rxz'] = float(f[10])
             point.anex['Ryz'] = float(f[11])
-        
-            tsout.add_point(point)    
+
+            tsout.add_point(point)
 
     tsout.stat = stat
 
@@ -3057,56 +3060,56 @@ def read_calais(filelist):
 def read_renag_synthetic(filein , discont_file_in = None):
 
     tsout = TimeSeriePoint()
-    
+
     fil = open(filein)
-    
+
     for l in fil:
-    
+
         if l[0] == "#":
             continue
-        
+
         f = l.split()
-    
+
         T = geok.year_decimal2dt(float(f[0]))
-    
+
         N = float(f[1])
         E = float(f[2])
         U = float(f[3])
-    
+
         sN = float(f[4])
         sE = float(f[5])
         sU = float(f[6])
-    
+
         point = Point(E,N,U,T,'ENU',sE,sN,sU)
-    
+
         #tsout.refENU = Point()
-    
+
         tsout.boolENU = True
         tsout.add_point(point)
-    
-    
+
+
     if discont_file_in:
         DiscontInp = open(discont_file_in)
-        
+
         Discont = []
         for l in DiscontInp:
             if l[0] == "#":
                 continue
             f = l.split()
-            try:    
+            try:
                 Discont.append(geok.doy2dt(int(f[0]),int(f[1])))
             except:
                 print("WARN : something went wrong during discont. file reading")
                 pass
-            
+
         Discont = sorted(Discont)
         tsout.set_discont(Discont)
-    
+
     stat_name = os.path.basename(filein).split(".")[0].split(".")[0]
     print(stat_name)
     tsout.meta_set(path=filein,stat=stat_name,name=stat_name)
 
-    
+
     return tsout
 
 
@@ -3123,32 +3126,32 @@ def read_jump_file(filein,returned_events=('S','E','D')):
     returned_events : tuple or list
         contains the inital letter of the event type which will be stored in the dico
         (See below)
-        
+
     Returns
     -------
     jump_dico : dict of dict of datetime
         outputed events, in the form jump_dico["STAT"]["L"] = datetime
         where L is the inital letter of the event type
-        
+
     Note
     ----
     A jump file contains infos like this :
-        
+
     >>> STAT S 2000 001
     >>> STAT E 2001 001
     >>> STAT D 2000 06 01
-    
+
     it can manage YEAR DOY or YEAR MM DD or DECIMAL YEAR
-    
+
     A non-blank 1st column is a commented line
-    
+
     After a #, it is a commentary
-        
+
     event type letters :
         S : Start
-        
+
         E : End
-        
+
         D : Discontinuity
 
     """
@@ -3171,7 +3174,7 @@ def read_jump_file(filein,returned_events=('S','E','D')):
                 jump_dico[stat] = dict()
                 for rtn_evt in returned_events:
                     jump_dico[stat][rtn_evt] = []
-                    
+
             ## Fill the dico
             if event in returned_events:
                 if    len(f) == 4: ### DOY
@@ -3180,7 +3183,7 @@ def read_jump_file(filein,returned_events=('S','E','D')):
                     date = dt.datetime(*[int(e) for e in f[2:]])
                 elif  len(f) == 3: ### DECIMAL YEAR
                     date = geok.year_decimal2dt(float(f[2]))
-                
+
                 date_tz = date.replace(tzinfo=pytz.UTC)
                 jump_dico[stat][event].append(date_tz)
     return jump_dico
@@ -3419,20 +3422,20 @@ def read_hector_neu(filein):
 
 
 def read_bull_B(path):
-    
+
     if not genefun.is_iterable(path):
         path = [path]
-        
+
     path = sorted(path)
-    
+
     DFstk = []
-    
+
     for path_solo in path:
         S = genefun.extract_text_between_elements(path_solo,"1 - DAILY FINAL VALUES" ,
                                          "2 - DAILY FINAL VALUES" )
-        
+
         L = S.replace('\t','\n').split("\n")
-        
+
         L2 = []
         for e in L:
             if len(e) > 0:
@@ -3444,14 +3447,14 @@ def read_bull_B(path):
             for ee in e.split():
                 L4.append(float(ee))
             L3.append(L4)
-    
+
         DF = pd.DataFrame(np.vstack(L3))
         DFstk.append(DF)
-        
+
     DFout = pd.concat(DFstk)
     DFout.columns = ["year","month","day","MJD","x","y","UT1-UTC","dX","dY",
                   "x err","y err","UT1 err","X err","Y err"]
-    
+
     return DFout
 ##
 def read_erp(path,return_array=False):
@@ -3469,9 +3472,9 @@ def read_erp(path,return_array=False):
             continue
         l=genefun.str_2_float_line(l.strip())
         L.append(l)
-        
+
     M = np.vstack(L)
-    
+
     if return_array:
         return M
     else:
@@ -3491,9 +3494,9 @@ def read_erp_multi(path_list , return_array=False,
     for path in path_list:
         L = read_erp(path,return_array)
         Lstk.append(L)
-    
+
     M = np.vstack(Lstk)
-    
+
     if smart_mode:
         Msmart = np.array([])
         for ilm , lm in enumerate(np.flipud(M)):
@@ -3503,7 +3506,7 @@ def read_erp_multi(path_list , return_array=False,
                 continue
             else:
                 Msmart = np.vstack((Msmart,lm))
-                
+
         M = np.flipud(Msmart)
 
     if return_array:
@@ -3514,36 +3517,36 @@ def read_erp_multi(path_list , return_array=False,
 def read_sp3(file_path_in,returns_pandas = True, name = '',
              epoch_as_pd_index = False):
     """
-    Read a SP3 file (GNSS Orbits standard file) and return X,Y,Z coordinates 
+    Read a SP3 file (GNSS Orbits standard file) and return X,Y,Z coordinates
     for each satellite and for each epoch
-    
+
     Parameters
     ----------
     file_path_in : str
         path of the SP3 file
 
     returns_pandas : bool
-        if True, return a Pandas DataFrame. 
+        if True, return a Pandas DataFrame.
         if False, return separated lists.
-        
+
     name : str
         a manual name for the file
 
     epoch_as_pd_index : bool
-        if True, the index of the output dataframe contains 
+        if True, the index of the output dataframe contains
         if False, it contains generic integer indexs
-    
-                
+
+
     Returns
     -------
     df : Pandas DataFrame
         if returns_pandas == True
-    
+
     epoch_stk ,  Xstk , Ystk , Zstk , Clkstk : lists
         if returns_pandas == False
-        
+
     """
-    
+
     AC_name =  os.path.basename(file_path_in)[:3]
 
     fil = open(file_path_in)
@@ -3585,8 +3588,8 @@ def read_sp3(file_path_in,returns_pandas = True, name = '',
                 Ystk.append(Y)
                 Zstk.append(Z)
                 Clkstk.append(Clk)
-                
-                
+
+
     AC_name_stk = [AC_name] * len(Xstk)
 
     if returns_pandas:
@@ -3606,13 +3609,13 @@ def read_sp3(file_path_in,returns_pandas = True, name = '',
     else:
         print("INFO : return list, very beta : no Sat. Vehicule Number info ...")
         return  epoch_stk ,  Xstk , Ystk , Zstk , Clkstk , AC_name_stk
-    
-    
+
+
 def read_sp3_header(sp3_path):
     """
     Read a SP3 file header and return a Pandas DataFrame
     with sat. PRNs and sigmas contained in the header
-    
+
     Parameters
     ----------
     sp3_path : str
@@ -3627,27 +3630,29 @@ def read_sp3_header(sp3_path):
     Note
     -------
     More infos about the sigma
-    http://acc.igs.org/orbacc.txt        
+    http://acc.igs.org/orbacc.txt
     """
 
-    
+
     F = open(sp3_path)
     ac_name = os.path.basename(sp3_path)[:3]
-    
+
 
     Lines = F.readlines()
-    
+
     Sat_prn_list = []
     Sat_sig_list = []
-    
-    for l in Lines:
+
+    for il , l in enumerate(Lines):
+        if il == 1:
+            date = geok.MJD2dt(int(l.split()[4]))
         if l[:2] == "+ ":
             Sat_prn_list.append(l)
         if l[:2] == "++":
             Sat_sig_list.append(l)
         if l[0] == "*":
             break
-    
+
     ### PRN part
     Sat_prn_list_clean = []
     for prn_line in Sat_prn_list:
@@ -3655,17 +3660,17 @@ def read_sp3_header(sp3_path):
         prn_line_splited = [e for e in prn_line_splited if not "+" in e]
         prn_line_splited = [e for e in prn_line_splited if not  e == "0"]
         Sat_prn_list_clean = Sat_prn_list_clean + prn_line_splited
-    
+
     sat_nbr = int(Sat_prn_list_clean[0])
-    
+
     Sat_prn_list_clean = Sat_prn_list_clean[1:]
-    
+
     Sat_prn_string = "".join(Sat_prn_list_clean)
-    
+
     Sat_prn_list_final = []
     for i in range(sat_nbr):
         Sat_prn_list_final.append(Sat_prn_string[i*3:i*3+3])
-    
+
     ### Sigma part
     Sat_sig_list_clean = []
     for sig_line in Sat_sig_list:
@@ -3675,22 +3680,26 @@ def read_sp3_header(sp3_path):
 
     Sat_sig_list_final = [int(e) for e in Sat_sig_list_clean[:sat_nbr]]
 
-    ### Export part    
+
+    ### Export part
     AC_name_list = [ac_name] * sat_nbr
-    Header_DF = pd.DataFrame(list(zip(AC_name_list,Sat_prn_list_final,Sat_sig_list_final)),
-                             columns=["AC","sat","sigma"])
-    
+    Date_list    = [date] * sat_nbr
+
+    Header_DF = pd.DataFrame(list(zip(AC_name_list,Sat_prn_list_final,
+                                      Sat_sig_list_final,Date_list)),
+                             columns=["AC","sat","sigma","epoch"])
+
     return Header_DF
 
 
 
 def sp3_decimate(file_in,file_out,step=15):
-    
+
     Fin = open(file_in)
 
     good_line = True
     outline = []
-    
+
     for l in Fin:
         if l[0] == "*":
             epoc   = geok.tup_or_lis2dt(l[1:].strip().split())
@@ -3698,34 +3707,150 @@ def sp3_decimate(file_in,file_out,step=15):
                 good_line = True
             else:
                 good_line = False
-                
+
         if good_line:
             outline.append(l)
-    
+
     line1     = outline[1]
     step_orig = outline[1].split()[3]
-    
+
     step_ok = "{:14.8f}".format(step * 60).strip()
-    
+
     line1b = line1.replace(step_orig,step_ok)
     outline[1] = line1b
-    
-    
+
+
     with open(file_out,"w+") as Fout:
         for l in outline:
             Fout.write(l)
-    
+
     return file_out
 
+
+
+
+def write_sp3(SP3_DF_in , outpath):
+    """
+    Write DOCSTRING
+    """
+    ################## MAIN DATA
+    LinesStk = []
+
+
+    SP3_DF_in.sort_values(["epoch","sat"],inplace=True)
+
+    EpochList  = SP3_DF_in["epoch"].unique()
+    SatList    = sorted(SP3_DF_in["sat"].unique())
+    SatListSet = set(SatList)
+
+    for epoc in EpochList:
+        SP3epoc   = pd.DataFrame(SP3_DF_in[SP3_DF_in["epoch"] == epoc])
+        ## Missing Sat
+        MissingSats = SatListSet.difference(set(SP3epoc["sat"]))
+        
+        for miss_sat in MissingSats:
+            miss_line = SP3epoc.iloc[0].copy()
+            miss_line["sat"]   = miss_sat
+            miss_line["const"] = miss_sat[0]
+            miss_line["x"]     = 0.000000
+            miss_line["y"]     = 0.000000
+            miss_line["z"]     = 0.000000
+            miss_line["clk"]   = 999999.999999
+            
+            SP3epoc = SP3epoc.append(miss_line)
+
+        SP3epoc.sort_values("sat",inplace=True)
+        timestamp = geok.dt2sp3_timestamp(geok.numpy_dt2dt(epoc)) + "\n"
+
+        LinesStk.append(timestamp)
+
+        linefmt = "P{:}{:14.6f}{:14.6f}{:14.6f}{:14.6f}\n"
+
+
+        for ilin , lin in SP3epoc.iterrows():
+            line_out = linefmt.format(lin["sat"],lin["x"],lin["y"],lin["z"],lin["clk"])
+
+            LinesStk.append(line_out)
+
+
+
+    ################## HEADER
+    ######### SATELLITE LIST
+
+    Satline_stk   = []
+    Sigmaline_stk = []
+
+    for i in range(5):
+        SatLine = SatList[17*i:17*(i+1)]
+        if len(SatLine) < 17:
+            complem = " 00" * (17 - len(SatLine))
+        else:
+            complem = ""
+
+        if i == 0:
+            nbsat4line = len(SatList)
+        else:
+            nbsat4line = ''
+
+        satline = "+  {:3}   ".format(nbsat4line) + "".join(SatLine) + complem + "\n"
+        sigmaline = "++         0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0\n"
+
+        Satline_stk.append(satline)
+        Sigmaline_stk.append(sigmaline)
+
+
+    ######### 2 First LINES
+    start_dt = geok.numpy_dt2dt(EpochList.min())
+
+    header_line1 = "#cP" + geok.dt2sp3_timestamp(start_dt,False) + "     {:3}".format(len(EpochList)) + "   u+U IGSXX FIT  XXX\n"
+
+    delta_epoch = int(genefun.most_common(np.diff(EpochList) * 10**-9))
+    MJD  = geok.dt2MJD(start_dt)
+    MJD_int = int(np.floor(MJD))
+    MJD_dec = MJD - MJD_int
+    gps_wwww , gps_sec = geok.dt2gpstime(start_dt,False,"gps")
+
+    header_line2 = "## {:4} {:15.8f} {:14.8f} {:5} {:15.13f}\n".format(gps_wwww,gps_sec,delta_epoch,MJD_int,MJD_dec)
+
+
+    ######### HEADER BOTTOM
+    header_bottom = """%c G  cc GPS ccc cccc cccc cccc cccc ccccc ccccc ccccc ccccc
+%c cc cc ccc ccc cccc cccc cccc cccc ccccc ccccc ccccc ccccc
+%f  1.2500000  1.025000000  0.00000000000  0.000000000000000
+%f  0.0000000  0.000000000  0.00000000000  0.000000000000000
+%i    0    0    0    0      0      0      0      0         0
+%i    0    0    0    0      0      0      0      0         0
+/* PCV:IGSXX_XXXX OL/AL:FESXXXX  NONE     YN CLK:CoN ORB:CoN
+/*     GeodeZYX Toolbox Output
+/*
+/*
+"""
+
+
+    ################## FINAL STACK
+
+    FinalLinesStk = []
+
+    FinalLinesStk.append(header_line1)
+    FinalLinesStk.append(header_line2)
+    FinalLinesStk = FinalLinesStk + Satline_stk + Sigmaline_stk
+    FinalLinesStk.append(header_bottom)
+    FinalLinesStk = FinalLinesStk + LinesStk + ["EOF"]
+
+    FinalStr = "".join(FinalLinesStk)
+
+    F = open(outpath,"w+")
+    F.write(FinalStr)
+
 def clk_decimate(file_in,file_out,step=5):
-    
+
     Fin = open(file_in)
-    
+
     good_line = True
     outline = []
-    
+
     step = 5
-    
+
     for l in Fin:
         good_line = True
         if l[0:2] in ("AR","AS"):
@@ -3734,21 +3859,21 @@ def clk_decimate(file_in,file_out,step=5):
                 good_line = True
             else:
                 good_line = False
-                
+
         if good_line:
             outline.append(l)
-    
+
     with open(file_out,"w+") as Fout:
         for l in outline:
             Fout.write(l)
-            
+
     return file_out
 
 
 def AC_equiv_vals(AC1,AC2):
     ### 1) Merge the 2 DF to find common lines
     ACmerged = pd.merge(AC1 , AC2 , how='inner', on=['epoch', 'sat'])
-    
+
     ### 2) Extract merged epoch & sv
     common_epoch = ACmerged["epoch"]
     common_sat   = ACmerged["sat"]
@@ -3761,7 +3886,7 @@ def AC_equiv_vals(AC1,AC2):
     ### 5) A sort to compare the same things
     AC1new.sort_values(by=['sat','sv'],inplace=True)
     AC2new.sort_values(by=['sat','sv'],inplace=True)
-    
+
     ### Check for > 99999 vals
     AC1_bad_bool_9  = (AC1new["x"] > 9999) & (AC1new["y"] > 9999) & (AC1new["z"] > 9999)
     AC1_bad_bool_9  = np.logical_not(np.array(AC1_bad_bool_9))
@@ -3770,7 +3895,7 @@ def AC_equiv_vals(AC1,AC2):
     AC2_bad_bool_9  = np.logical_not(np.array(AC2_bad_bool_9))
 
     AC12_bad_bool_9 = np.array(np.logical_and(AC1_bad_bool_9 , AC2_bad_bool_9))
-    
+
     ### Check for NaN vals
     AC1_bad_bool_nan  = np.isnan(AC1new["x"]) & np.isnan(AC1new["y"]) & np.isnan(AC1new["z"])
     AC1_bad_bool_nan  = np.logical_not(np.array(AC1_bad_bool_nan))
@@ -3779,56 +3904,56 @@ def AC_equiv_vals(AC1,AC2):
     AC2_bad_bool_nan  = np.logical_not(np.array(AC2_bad_bool_nan))
 
     AC12_bad_bool_nan = np.array(np.logical_and(AC1_bad_bool_nan , AC2_bad_bool_nan))
-        
+
     AC12_bad_bool = np.logical_and(AC12_bad_bool_9, AC12_bad_bool_nan)
 
     AC1_ok = AC1new[AC12_bad_bool]
     AC2_ok = AC2new[AC12_bad_bool]
-    
+
     return AC1_ok , AC2_ok , ACmerged
 
-    
+
 ############################# READ CLK 30
 def read_clk1(file_path_in, returns_pandas = True, interval=None):
     """
     General description
-    
+
     Parameters
     ----------
-    file_path_in :  str 
-        Path of the file in the local machine. 
+    file_path_in :  str
+        Path of the file in the local machine.
 
     returns_pandas :  bool
         Define if pandas function will be used to put the data on tables
-        
-    interval :  int 
-        Defines which interval should be used in the data tables. The interval is always in minutes unit.        
-                
+
+    interval :  int
+        Defines which interval should be used in the data tables. The interval is always in minutes unit.
+
     Returns
     -------
     out1 : float or int oandas table
-        Returns a panda table format with the data extracted from the file. 
-    
-    out2 :  list 
+        Returns a panda table format with the data extracted from the file.
+
+    out2 :  list
        In case of the pandas function are not in use, the return will be a list with the data extract from the file.
-        
+
 
     """
 
     file = open(file_path_in,'r')
     fil = file.readlines()
     file.close()
-   
-    
+
+
     types_m, name_m, year_m, month_m, day_m, hr_m, minute_m, seconds_m, epoch_m, offset_m, rms_m = [],[],[],[],[],[],[],[],[],[],[]
-    
+
     Clk_read  = []
-        
+
         #####IGNORES HEADER
-   
+
     le = 0
     i = 0
-    count = 0 
+    count = 0
     for le in range(len(fil)):
      linhaatual = linecache.getline(file_path_in, le)
      header_end = (linhaatual[60:73])
@@ -3850,15 +3975,15 @@ def read_clk1(file_path_in, returns_pandas = True, interval=None):
           ##### check if there is a value for thr rms
           if (linhaatual[65:70]) == '     ' or len(linhaatual[65:70])==0:
               rms = 0
-          else:    
+          else:
               rms = float(linhaatual[61:79])
           ############
           epoch = dt.datetime(year,month,day,hr,minute,int(seconds),int(((int(seconds)-seconds)*10**-6))) # epoch as date.time function
-       
-        ############ Data in a defined interval        
+
+        ############ Data in a defined interval
           if interval:
               if (float(minute)%interval) == 0 and float(seconds) == 0:
-      
+
                   if returns_pandas:
                             Clk_dados = [types,name,year,month,day,hr,minute,seconds,epoch,offset,rms]
                             Clk_read.append(Clk_dados)
@@ -3874,8 +3999,8 @@ def read_clk1(file_path_in, returns_pandas = True, interval=None):
                             epoch_m.append(epoch)
                             offset_m.append(offset)
                             rms_m.append(rms)
-         #########################################################                   
-        ########################################################### standart file epochs                   
+         #########################################################
+        ########################################################### standart file epochs
           else:
               if returns_pandas:
                             Clk_dados = [types,name,year,month,day,hr,minute,seconds,epoch,offset,rms]
@@ -3892,66 +4017,66 @@ def read_clk1(file_path_in, returns_pandas = True, interval=None):
                             epoch_m.append(epoch)
                             offset_m.append(offset)
                             rms_m.append(rms)
-              
-                               
-          i +=1                
 
-  ################################################################################################  
-   ############################################ put on pandas table format 
+
+          i +=1
+
+  ################################################################################################
+   ############################################ put on pandas table format
     if returns_pandas:
-     Clk_readed = pd.DataFrame(Clk_read, columns=['type','name','year','month','day','hr','minutes','seconds','epoch','offset','rms']) 
+     Clk_readed = pd.DataFrame(Clk_read, columns=['type','name','year','month','day','hr','minutes','seconds','epoch','offset','rms'])
      Clk_readed.path = file_path_in
-       
-     return Clk_readed        
-                      
-          ###############################          
+
+     return Clk_readed
+
+          ###############################
     else:
            print(" ...")
            return  types_m, name_m, year_m, month_m, day_m, hr_m, minute_m, seconds_m, offset_m, rms_m
-    
-    
 
-        
-############################# END FUNCTION READ CLK 30   
-           
-       
-        
-        
+
+
+
+############################# END FUNCTION READ CLK 30
+
+
+
+
 ################################################READ ERP GUS
 def read_erp1(caminho_arq,ac):
-    
+
     le = open(caminho_arq, 'r')
     letudo = le.readlines()
     le.close()
     tamanho = len(letudo) #usado para saber quantas linhas tem o arquivo
-    
-    
-    
+
+
+
     para = tamanho #onde o arquivo para de ser lido
-    
+
     numeros = ['0','1','2','3','4','5','6','7','8','9']
-    le = 0 
+    le = 0
     numlin = 0 #numero de linhas da matriz de epocas
     numcol = 16 #numero de colunas que a matriz final deve ter
-    
-    
+
+
     while le <= para:
      linhaatual = linecache.getline(caminho_arq, le)
-     if linhaatual[0:1] in numeros: 
+     if linhaatual[0:1] in numeros:
          numlin +=1
-     le +=1  
-        
+     le +=1
+
     dt = np.dtype(object)
-    ERP = np.empty((numlin,numcol), dtype=dt) 
-    n = 0    
+    ERP = np.empty((numlin,numcol), dtype=dt)
+    n = 0
     j = 0
     l = 0
     g = 0
-#####################################   
+#####################################
     if ac == 'wum':
         while l <=para:
          linhaatual = linecache.getline(caminho_arq, l)
-         if linhaatual[0:1] in numeros:       
+         if linhaatual[0:1] in numeros:
              ERP[j,0] = float(linhaatual[0:8])
              ERP[j,1] = round((float(linhaatual[11:17])*(10**-6)),6)
              ERP[j,2] = float(linhaatual[18:25])*(10**-6)
@@ -3962,25 +4087,25 @@ def read_erp1(caminho_arq,ac):
              ERP[j,7] = float(linhaatual[57:61])*(10**-7)
              ERP[j,8] = float(linhaatual[63:69])*(10**-7)
              ERP[j,9] = float(linhaatual[69:73])
-             ERP[j,10] = float(linhaatual[74:76]) 
-             ERP[j,11] = float(linhaatual[76:80]) 
+             ERP[j,10] = float(linhaatual[74:76])
+             ERP[j,11] = float(linhaatual[76:80])
              ERP[j,12] = float(linhaatual[81:86])*(10**-6)
              ERP[j,13] = float(linhaatual[88:93])*(10**-6)
              ERP[j,14] = float(linhaatual[96:101])*(10**-6)
              ERP[j,15] = float(linhaatual[102:107])*(10**-6)
-              
+
              j +=1
-         l +=1     
-         
+         l +=1
+
         Erp_end = pd.DataFrame(ERP, columns=['MJD','X-P', 'Y-P', 'UT1UTC','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
-                                             'X-RT','Y-RT','S-XR','S-YR']) 
+                                             'X-RT','Y-RT','S-XR','S-YR'])
     #    Erp_end.set_index('MJD',inplace=True)
-        return Erp_end  
-#######################################    
-    if ac == 'COD':    
+        return Erp_end
+#######################################
+    if ac == 'COD':
         while n <=para:
          linhaatual = linecache.getline(caminho_arq, n)
-         if linhaatual[0:1] in numeros:       
+         if linhaatual[0:1] in numeros:
              ERP[j,0] = float(linhaatual[0:8])
              ERP[j,1] = round((float(linhaatual[12:17])*(10**-6)),6)
              ERP[j,2] = float(linhaatual[20:27])*(10**-6)
@@ -3991,25 +4116,25 @@ def read_erp1(caminho_arq,ac):
              ERP[j,7] = float(linhaatual[59:61])*(10**-7)
              ERP[j,8] = float(linhaatual[65:66])*(10**-7)
              ERP[j,9] = float(linhaatual[67:70])
-             ERP[j,10] = float(linhaatual[71:74]) 
-             ERP[j,11] = float(linhaatual[75:77]) 
+             ERP[j,10] = float(linhaatual[71:74])
+             ERP[j,11] = float(linhaatual[75:77])
              ERP[j,12] = float(linhaatual[81:85])*(10**-6)
              ERP[j,13] = float(linhaatual[88:92])*(10**-6)
              ERP[j,14] = float(linhaatual[94:98])*(10**-6)
              ERP[j,15] = float(linhaatual[100:104])*(10**-6)
-              
+
              j +=1
-         n +=1     
-         
+         n +=1
+
         Erp_end = pd.DataFrame(ERP, columns=['MJD','X-P', 'Y-P', 'UT1UTC','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
-                                             'X-RT','Y-RT','S-XR','S-YR']) 
+                                             'X-RT','Y-RT','S-XR','S-YR'])
     #    Erp_end.set_index('MJD',inplace=True)
-        return Erp_end    
-################################################   
+        return Erp_end
+################################################
     if ac == 'gbm':
         while g <=para:
          linhaatual = linecache.getline(caminho_arq, g)
-         if linhaatual[0:1] in numeros:       
+         if linhaatual[0:1] in numeros:
              ERP[j,0] = float(linhaatual[0:9])
              ERP[j,1] = round((float(linhaatual[12:18])*(10**-6)),6)
              ERP[j,2] = float(linhaatual[19:25])*(10**-6)
@@ -4020,50 +4145,50 @@ def read_erp1(caminho_arq,ac):
              ERP[j,7] = float(linhaatual[56:59])*(10**-7)
              ERP[j,8] = float(linhaatual[60:64])*(10**-7)
              ERP[j,9] = float(linhaatual[65:70])
-             ERP[j,10] = float(linhaatual[71:72]) 
-             ERP[j,11] = float(linhaatual[73:76]) 
+             ERP[j,10] = float(linhaatual[71:72])
+             ERP[j,11] = float(linhaatual[73:76])
              ERP[j,12] = float(linhaatual[77:82])*(10**-6)
              ERP[j,13] = float(linhaatual[83:88])*(10**-6)
              ERP[j,14] = float(linhaatual[92:96])*(10**-6)
              ERP[j,15] = float(linhaatual[100:104])*(10**-6)
-              
+
              j +=1
-         g +=1     
-         
+         g +=1
+
         Erp_end = pd.DataFrame(ERP, columns=['MJD','X-P', 'Y-P', 'UT1UTC','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
-                                             'X-RT','Y-RT','S-XR','S-YR']) 
+                                             'X-RT','Y-RT','S-XR','S-YR'])
     #    Erp_end.set_index('MJD',inplace=True)
         return Erp_end
         #out = '/home/mansur/Documents/MGEX/Saida/outERP_'+caminho_arq[28:-4]+'.txt'
         #np.savetxt(out, ERP, fmt="%02s %04s %05s %05s %05s %05s %05s %10s %10s %10s %10s %10s %10s %10s %10s %10s")
 ################################################### END READ ERP GUS
-##########################################################################################################################    
-def read_erp2(caminho_arq,ac): 
+##########################################################################################################################
+def read_erp2(caminho_arq,ac):
     """
     General description
     Units: ('MJD','X-P (arcsec)', 'Y-P (arcsec)', 'UT1UTC (E-7S)','LOD (E-7S/D)','S-X (E-6" arcsec)','S-Y (E-6" arcsec)',
     'S-UT (E-7S)','S-LD (E-7S/D)','NR (E-6" arcsec)', 'NF (E-6" arcsec)', 'NT (E-6" arcsec)',
-    'X-RT (arcsec/D)','Y-RT (arcsec/D)','S-XR (E-6" arcsec/D)','S-YR (E-6" arcsec/D)', 'C-XY', 'C-XT', 
+    'X-RT (arcsec/D)','Y-RT (arcsec/D)','S-XR (E-6" arcsec/D)','S-YR (E-6" arcsec/D)', 'C-XY', 'C-XT',
     'C-YT', 'DPSI', 'DEPS','S-DP','S-DE')
-    
+
     Parameters
     ----------
-    file_path_in :  str 
-        Path of the file in the local machine. 
+    file_path_in :  str
+        Path of the file in the local machine.
 
     which AC :  str
         The analisys center that will be used
-        
-                    
+
+
     Returns
     -------
     out1 :  pandas table
-        Returns a panda table format with the data extracted from the file. 
-    
+        Returns a panda table format with the data extracted from the file.
+
 
     """
-        
-    #### FIND DELIVERY DATE   
+
+    #### FIND DELIVERY DATE
     name = os.path.basename(caminho_arq)
 
     if len(name) == 12:
@@ -4072,48 +4197,48 @@ def read_erp2(caminho_arq,ac):
         dt_delivery = geok.sp3name_v3_2dt(caminho_arq)
     else:
         dt_delivery = geok.posix2dt(0)
-    
-    
+
+
     le = open(caminho_arq, 'r')
     letudo = le.readlines()
     le.close()
     tamanho = len(letudo) #usado para saber quantas linhas tem o arquivo
-    
+
     #para = tamanho #onde o arquivo para de ser lido
-    
+
     numeros = ['0','1','2','3','4','5','6','7','8','9']
-    #le = 0 
+    #le = 0
     #numlin = 0 #numero de linhas da matriz de epocas
     #numcol = 16 #numero de colunas que a matriz final deve ter
-    
-    ERP=[]   
-    
- 
+
+    ERP=[]
+
+
     if caminho_arq[-3:] in ('snx','ssc'):
         file = open(caminho_arq)
         Lines =  file.readlines()
         XPO_stk  = []
-        XPO_std_stk = []   
+        XPO_std_stk = []
         YPO_stk  = []
-        YPO_std_stk = []  
+        YPO_std_stk = []
         LOD_stk  = []
-        LOD_std_stk = []  
+        LOD_std_stk = []
         MJD_stk = []
         marker = False
 
         for i in range(len(Lines)):
-            
+
             if len(Lines[i].strip()) == 0:
                 continue
             else:
-            
+
                 if Lines[i].split()[0] == '+SOLUTION/ESTIMATE':
                     marker = True
-                
+
                 if Lines[i].split()[0] == '-SOLUTION/ESTIMATE':
                     marker = False
-                
-                if cmg.contains_word(Lines[i],'XPO') and marker:  
+
+                if cmg.contains_word(Lines[i],'XPO') and marker:
                     Doy = (Lines[i][30:33])
                     Year = (Lines[i][27:29])
                     Pref_year = '20'
@@ -4124,7 +4249,7 @@ def read_erp2(caminho_arq,ac):
                     XPO_stk.append(XPO)
                     XPO_std_stk.append(XPO_std)
                     MJD_stk.append(cmg.jd_to_mjd(cmg.date_to_jd(Date.year,Date.month,Date.day)))
-                    
+
                 if cmg.contains_word(Lines[i],'YPO') and marker:
                     Doy = (Lines[i][30:33])
                     Year = str(Lines[i][27:29])
@@ -4136,8 +4261,8 @@ def read_erp2(caminho_arq,ac):
                     YPO_stk.append(YPO)
                     YPO_std_stk.append(YPO_std)
                     MJD_stk.append(cmg.jd_to_mjd(cmg.date_to_jd(Date.year,Date.month,Date.day)))
-                    
-                if cmg.contains_word(Lines[i],'LOD') and marker:  
+
+                if cmg.contains_word(Lines[i],'LOD') and marker:
                     Doy = (Lines[i][30:33])
                     Year = str(Lines[i][27:29])
                     Pref_year = '20'
@@ -4148,80 +4273,80 @@ def read_erp2(caminho_arq,ac):
                     LOD_stk.append(LOD)
                     LOD_std_stk.append(LOD_std)
                     MJD_stk.append(cmg.jd_to_mjd(cmg.date_to_jd(Date.year,Date.month,Date.day)))
-            
+
         MJD = list(set(MJD_stk))
         if len(LOD_stk) == 0:
-                LOD_stk = ['0']*len(MJD) 
+                LOD_stk = ['0']*len(MJD)
                 LOD_std_stk = ['0']*len(MJD)
-    
+
         for i in range(len(MJD)):
-    
+
             ERP_data = [ac, MJD[i], XPO_stk[i], YPO_stk[i], 0, LOD_stk[i], XPO_std_stk[i], YPO_std_stk[i],
-                     0, LOD_std_stk[i], 0, 0, 0, 0, 0, 0, 0, dt_delivery]   
-            ERP.append(ERP_data)        
-        
-   
-    
+                     0, LOD_std_stk[i], 0, 0, 0, 0, 0, 0, 0, dt_delivery]
+            ERP.append(ERP_data)
+
+
+
     if ac in ('COD','cod','com', 'cof', 'grg', 'mit', 'sio'):
         for i in range(tamanho+1):
             linhaatual = linecache.getline(caminho_arq, i)
-            if linhaatual[0:1] in numeros: 
+            if linhaatual[0:1] in numeros:
                 ERP_data = linhaatual.split()
                 for j in range(len(ERP_data)):
                     ERP_data[j] = float(ERP_data[j])
                 ERP_data.insert(0,ac)
                 ERP_data[2] =  ERP_data[2]*(10**-6)
-                ERP_data[3] =  ERP_data[3]*(10**-6) 
-                ERP_data[13] = ERP_data[13]*(10**-6) 
+                ERP_data[3] =  ERP_data[3]*(10**-6)
+                ERP_data[13] = ERP_data[13]*(10**-6)
                 ERP_data[14] = ERP_data[14]*(10**-6)
                 del ERP_data[17:]
                 ERP_data.append(dt_delivery)
-                
-                ERP.append(ERP_data)    
-                
+
+                ERP.append(ERP_data)
+
 #        Erp_end = pd.DataFrame(ERP, columns=['AC','MJD','X-P', 'Y-P', 'UT1UTC(UT1 -TAI)','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
-#                                                 'X-RT','Y-RT','S-XR','S-YR',"Delivery_date"]) 
+#                                                 'X-RT','Y-RT','S-XR','S-YR',"Delivery_date"])
 #        return Erp_end
-#        
-    
+#
+
     if ac in ('wum','grg','esa', 'mit', 'ngs', 'sio'):
         for i in range(tamanho+1):
             linhaatual = linecache.getline(caminho_arq, i)
-            if linhaatual[0:1] in numeros: 
+            if linhaatual[0:1] in numeros:
                 ERP_data = linhaatual.split()
                 for j in range(len(ERP_data)):
                     ERP_data[j] = float(ERP_data[j])
                 ERP_data.insert(0,ac)
                 ERP_data[2] =  ERP_data[2]*(10**-6)
-                ERP_data[3] =  ERP_data[3]*(10**-6) 
-                ERP_data[13] = ERP_data[13]*(10**-6) 
-                ERP_data[14] = ERP_data[14]*(10**-6)   
-                ERP_data.append(dt_delivery)
-
-                ERP.append(ERP_data)    
-#        Erp_end = pd.DataFrame(ERP, columns=['AC','MJD','X-P', 'Y-P', 'UT1UTC(UT1 -TAI)','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
-#                                                 'X-RT','Y-RT','S-XR','S-YR'])     
-#        return Erp_end
-#        
-    if ac in ('gbm', 'gfz'):
-        for i in range(tamanho+1):
-            linhaatual = linecache.getline(caminho_arq, i)
-            if linhaatual[0:1] in numeros: 
-                ERP_data = linhaatual.split()
-                for j in range(len(ERP_data)):
-                    ERP_data[j] = float(ERP_data[j])
-                ERP_data.insert(0,ac)
-                ERP_data[2] =  ERP_data[2]*(10**-6)
-                ERP_data[3] =  ERP_data[3]*(10**-6) 
-                ERP_data[13] = ERP_data[13]*(10**-6) 
+                ERP_data[3] =  ERP_data[3]*(10**-6)
+                ERP_data[13] = ERP_data[13]*(10**-6)
                 ERP_data[14] = ERP_data[14]*(10**-6)
                 ERP_data.append(dt_delivery)
 
-                ERP.append(ERP_data)    
+                ERP.append(ERP_data)
 #        Erp_end = pd.DataFrame(ERP, columns=['AC','MJD','X-P', 'Y-P', 'UT1UTC(UT1 -TAI)','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
-#                                                 'X-RT','Y-RT','S-XR','S-YR'])  ##EH TBM O RATE XY POR DIA??????    
-#        return Erp_end 
-    
+#                                                 'X-RT','Y-RT','S-XR','S-YR'])
+#        return Erp_end
+#
+    if ac in ('gbm', 'gfz'):
+        for i in range(tamanho+1):
+            linhaatual = linecache.getline(caminho_arq, i)
+            if linhaatual[0:1] in numeros:
+                ERP_data = linhaatual.split()
+                for j in range(len(ERP_data)):
+                    ERP_data[j] = float(ERP_data[j])
+                ERP_data.insert(0,ac)
+                ERP_data[2] =  ERP_data[2]*(10**-6)
+                ERP_data[3] =  ERP_data[3]*(10**-6)
+                ERP_data[13] = ERP_data[13]*(10**-6)
+                ERP_data[14] = ERP_data[14]*(10**-6)
+                ERP_data.append(dt_delivery)
+
+                ERP.append(ERP_data)
+#        Erp_end = pd.DataFrame(ERP, columns=['AC','MJD','X-P', 'Y-P', 'UT1UTC(UT1 -TAI)','LOD','S-X','S-Y','S-UT','S-LD','NR', 'NF', 'NT',
+#                                                 'X-RT','Y-RT','S-XR','S-YR'])  ##EH TBM O RATE XY POR DIA??????
+#        return Erp_end
+
     header = []
     if ac in ('emr'):
         for i in range(tamanho+1):
@@ -4229,53 +4354,53 @@ def read_erp2(caminho_arq,ac):
             if linhaatual == 'EOP  SOLUTION':
                 del ERP_data[:]
                 header = ['EOP  SOLUTION']
-            if linhaatual[0:1] in numeros and 'EOP  SOLUTION' in header: 
+            if linhaatual[0:1] in numeros and 'EOP  SOLUTION' in header:
                 ERP_data = linhaatual.split()
                 for j in range(len(ERP_data)):
                     ERP_data[j] = float(ERP_data[j])
                 ERP_data.insert(0,ac)
                 ERP_data[2] =  ERP_data[2]*(10**-6)
-                ERP_data[3] =  ERP_data[3]*(10**-6) 
-                ERP_data[13] = ERP_data[13]*(10**-6) 
+                ERP_data[3] =  ERP_data[3]*(10**-6)
+                ERP_data[13] = ERP_data[13]*(10**-6)
                 ERP_data[14] = ERP_data[14]*(10**-6)
                 del ERP_data[17:]
                 ERP_data.append(dt_delivery)
 
-                ERP.append(ERP_data)    
-                
+                ERP.append(ERP_data)
+
     Erp_end = pd.DataFrame(ERP, columns=['AC','MJD','X-P', 'Y-P', 'UT1UTC(UT1 -TAI)','LOD','S-X','S-Y','S-UT','S-LD',
                                          'NR', 'NF', 'NT',
                                          'X-RT','Y-RT','S-XR','S-YR',
-                                         'Delivered_date']) 
+                                         'Delivered_date'])
     return Erp_end
 
-######################################################################################################################################## 
+########################################################################################################################################
 ############################################### READ IERS GUS
 
 def read_IERS(file_path_in):
 #    file_path_in =  '/dsk/mansur/MGEX_C/ERP_IERS'
-    
+
     file = open(file_path_in,'r')
     fil = file.readlines()
     file.close()
-    return fil    
-def read_IERS_info(fil, mjd):    
+    return fil
+def read_IERS_info(fil, mjd):
     #    mjd = int(mjd)
     X, Y, ut1utc, dx, dy, xerr, yerr, ut1utcerr, dxerr, dyerr, LOD, sig_lod, OMEGA, sig_ome = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     PoleXY = []
-    
+
 #    mjd = 58230
-    
+
     for i in range(len(fil)):
     #    linhaatual = linecache.getline(file_path_in, i)
         linhaatual = fil[i]
         if (linhaatual[15:20]) == str(mjd) and (linhaatual[104:105]) != '':
           X = float(linhaatual[23:30])*(10**-3)
           Y = float(linhaatual[31:39])*(10**-3)
-          ut1utc = float(linhaatual[40:49])*(10**-3)     
-          dx = float(linhaatual[51:58])*(10**-3)     
-          dy = float(linhaatual[59:65])*(10**-3)     
-          xerr = float(linhaatual[68:74])*(10**-3)     
+          ut1utc = float(linhaatual[40:49])*(10**-3)
+          dx = float(linhaatual[51:58])*(10**-3)
+          dy = float(linhaatual[59:65])*(10**-3)
+          xerr = float(linhaatual[68:74])*(10**-3)
           yerr = float(linhaatual[77:82])*(10**-3)
           ut1utcerr = float(linhaatual[86:93])*(10**-3)
           dxerr = float(linhaatual[94:100])*(10**-3)
@@ -4285,12 +4410,12 @@ def read_IERS_info(fil, mjd):
           sig_lod = float(linhaatual[30:37])*(10**-3)
           OMEGA = float(linhaatual[38:53])*(10**-3)
           sig_ome = float(linhaatual[56:70])*(10**-3)
-          
-    line_data = [mjd,X,Y,ut1utc,dx,dy,xerr,yerr,ut1utcerr,dxerr,dyerr,LOD,sig_lod,OMEGA,sig_ome]  
+
+    line_data = [mjd,X,Y,ut1utc,dx,dy,xerr,yerr,ut1utcerr,dxerr,dyerr,LOD,sig_lod,OMEGA,sig_ome]
     PoleXY.append(line_data)
-    
-    
-    
+
+
+
     PoleXY_data = pd.DataFrame(PoleXY, columns=['mjd','X','Y','ut1-utc','dx','dy','xerr','yerr','ut1utcerr','dxerr','dyerr','LOD','sig_lod','OMEGA','sig_ome'])
     PoleXY_data.set_index('mjd',inplace=True)
     return PoleXY_data
@@ -4298,54 +4423,54 @@ def read_IERS_info(fil, mjd):
 
 
 
-################################################## END READ IERS GUS   
-    
+################################################## END READ IERS GUS
+
 
 
 
 ##################################### MAKE A LIST OF FILES IN A FOLDER GUS
-    
+
 def list_files(dire,file = None):
     """
     written for MGEX combi by GM
     should be discontinued
     """
     List_arq = os.listdir(dire)
-    
+
     path = []
-    
+
     for l in range(len(List_arq)):
         atual = List_arq[l]
         if file == 'sp3':
             if atual[-3:] == 'SP3' or atual[-3:] == 'sp3':
                 path.append(os.path.join(dire,List_arq[l]))
-                
+
         if file == 'clk':
             if atual[-3:] == 'CLK' or atual[-3:] == 'clk':
                 path.append(os.path.join(dire,List_arq[l]))
-                
+
         if file == 'erp':
             if atual[-3:] == 'ERP' or atual[-3:] == 'erp':
-                path.append(os.path.join(dire,List_arq[l])) 
-                
+                path.append(os.path.join(dire,List_arq[l]))
+
         if file == 'eph':
             if atual[-3:] == 'EPH' or atual[-3:] == 'eph':
-                path.append(os.path.join(dire,List_arq[l]))  
-        
-        
+                path.append(os.path.join(dire,List_arq[l]))
+
+
         if file == 'snx':
             if atual[-3:] == 'SNX' or atual[-3:] == 'snx':
-                path.append(os.path.join(dire,List_arq[l])) 
-                
-         
-    return path      
+                path.append(os.path.join(dire,List_arq[l]))
+
+
+    return path
 
 ################################################ END MAKE A LIST OF FILES IN A FOLDER GUS
-    
 
 
 
-def diff_pandas(DF,col_name):    
+
+def diff_pandas(DF,col_name):
     """
     Differentiate a Pandas DataFrame, if index is time
 
@@ -4356,12 +4481,12 @@ def diff_pandas(DF,col_name):
 
     col_name : str
         the column of the DataFrame you want to differentiate
-        
+
     Returns
     -------
     DSout : Pandas DataFrame
         Differenciated column of the input DataFrame
-    
+
     """
     DSout = DF[col_name].diff() / DF[col_name].index.to_series().diff().dt.total_seconds()
     return DSout
@@ -4371,28 +4496,28 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
                  sats_used_list = ['G'],
                  name1='',name2='',use_name_1_2_for_table_name = False,
                  RTNoutput = True,convert_ECEF_ECI=True,
-                 clean_null_values = True):    
-    """    
-    Compares 2 GNSS orbits files (SP3), and gives a summary plot and a 
+                 clean_null_values = True):
+    """
+    Compares 2 GNSS orbits files (SP3), and gives a summary plot and a
     statistics table
 
     Parameters
     ----------
-    Data_inp_1 & Data_inp_2 : str or Pandas DataFrame 
+    Data_inp_1 & Data_inp_2 : str or Pandas DataFrame
         contains the orbits or path (string) to the sp3
 
     step_data : int
         per default data sampling
-        
+
     sats_used_list : list of str
         used constellation or satellite : G E R C ... E01 , G02 ...
         Individuals satellites are prioritary on whole constellations
-        e.g. ['G',"E04"] 
+        e.g. ['G',"E04"]
 
 
     RTNoutput : bool
         select output, Radial Transverse Normal or XYZ
-        
+
     convert_ECEF_ECI : bool
         convert sp3 ECEF => ECI, must be True in operational !
 
@@ -4401,39 +4526,39 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
 
     use_name_1_2_for_table_name : bool
         False : use name 1 and 2 for table name, use datafile instead
-    
+
     clean_null_values : bool or str
-        if True or "all" remove sat position in all X,Y,Z values 
+        if True or "all" remove sat position in all X,Y,Z values
         are null (0.000000)
         if "any", remove sat position if X or Y or Z is null
         if False, keep everything
-                
+
     Returns
     -------
-    Diff_sat_all : Pandas DataFrame 
-    contains differences b/w Data_inp_1 & Data_inp_2 
+    Diff_sat_all : Pandas DataFrame
+    contains differences b/w Data_inp_1 & Data_inp_2
     in Radial Transverse Normal OR XYZ frame
 
         Attributes of Diff_sat_all :
             Diff_sat_all.name : title of the table
-        
+
     Note
     ----
-    clean_null_values if useful (and necessary) only if 
+    clean_null_values if useful (and necessary) only if
     convert_ECEF_ECI = False
     if convert_ECEF_ECI = True, the cleaning will be done by
     a side effect trick : the convertion ECEF => ECI will generate NaN
     for a zero-valued position
-    But, nevertheless, activating  clean_null_values = True is better 
-    This Note is in fact usefull if you want to see bad positions on a plot 
+    But, nevertheless, activating  clean_null_values = True is better
+    This Note is in fact usefull if you want to see bad positions on a plot
     => Then convert_ECEF_ECI = False and clean_null_values = False
-    
+
     Source
     ------
     "Coordinate Systems", ASEN 3200 1/24/06 George H. Born
-    
-    """    
-    
+
+    """
+
     # selection of both used Constellations AND satellites
     const_used_list = []
     sv_used_list    = []
@@ -4444,9 +4569,9 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
             sv_used_list.append(sat)
             if not sat[0] in const_used_list:
                 const_used_list.append(sat[0])
-    
+
     # Read the files or DataFrames
-    # metadata attributes are not copied 
+    # metadata attributes are not copied
     # Thus, manual copy ...
     # (Dirty way, should be impoved without so many lines ...)
     if type(Data_inp_1) is str:
@@ -4457,44 +4582,44 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
             D1orig.name = Data_inp_1.name
         except:
             D1orig.name = "no_name"
-        try:            
+        try:
             D1orig.path = Data_inp_1.path
         except:
-            D1orig.path = "no_path"   
-        try:            
+            D1orig.path = "no_path"
+        try:
             D1orig.filename = Data_inp_1.filename
         except:
-            D1orig.filename = "no_filename"               
+            D1orig.filename = "no_filename"
 
     if type(Data_inp_2) is str:
         D2orig = read_sp3(Data_inp_2,epoch_as_pd_index=True)
     else:
-        D2orig = Data_inp_2.copy(True)        
+        D2orig = Data_inp_2.copy(True)
         try:
             D2orig.name = Data_inp_2.name
         except:
             D2orig.name = "no_name"
-        try:            
+        try:
             D2orig.path = Data_inp_2.path
         except:
-            D2orig.path = "no_path"   
-        try:            
+            D2orig.path = "no_path"
+        try:
             D2orig.filename = Data_inp_2.filename
         except:
-            D2orig.filename = "no_filename"     
+            D2orig.filename = "no_filename"
 
     #### NB : It has been decided with GM that the index of a SP3 dataframe
     ####      will be integers, not epoch datetime anymore
     ####      BUT here, for legacy reasons, the index has to be datetime
-    
+
     if isinstance(D1orig.index[0], (int, np.integer)):
         D1orig.set_index("epoch",inplace=True)
 
     if isinstance(D2orig.index[0], (int, np.integer)):
         D2orig.set_index("epoch",inplace=True)
-            
+
     Diff_sat_stk = []
-    
+
     # This block is for removing null values
     if clean_null_values:
         if clean_null_values == "all":
@@ -4503,54 +4628,54 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
             all_or_any = np.any
         else:
             all_or_any = np.all
-            
+
         xyz_lst = ['x','y','z']
-        
+
         D1_null_bool = all_or_any(np.isclose(D1orig[xyz_lst],0.),axis=1)
         D2_null_bool = all_or_any(np.isclose(D2orig[xyz_lst],0.),axis=1)
-        
+
         D1 = D1orig[np.logical_not(D1_null_bool)]
-        D2 = D2orig[np.logical_not(D2_null_bool)]    
-        
+        D2 = D2orig[np.logical_not(D2_null_bool)]
+
         if np.any(D1_null_bool) or np.any(D2_null_bool):
             print("WARN : Null values contained in SP3 files : ")
             print("f1:" , np.sum(D1_null_bool) , genefun.join_improved(" " ,
                   *list(set(D1orig[D1_null_bool]["sat"]))))
             print("f2:" , np.sum(D2_null_bool) , genefun.join_improved(" " ,
                   *list(set(D2orig[D2_null_bool]["sat"]))))
-            
+
     else:
         D1 = D1orig.copy()
         D2 = D2orig.copy()
-        
+
     for constuse in const_used_list:
         D1const = D1[D1['const'] == constuse]
         D2const = D2[D2['const'] == constuse]
-        
+
         # checking if the data correspond to the step
         bool_step1 = np.mod((D1const.index - np.min(D1.index)).seconds,step_data) == 0
-        bool_step2 = np.mod((D2const.index - np.min(D2.index)).seconds,step_data) == 0         
-        
+        bool_step2 = np.mod((D2const.index - np.min(D2.index)).seconds,step_data) == 0
+
         D1window = D1const[bool_step1]
         D2window = D2const[bool_step2]
-                
+
         # find common sats and common epochs
         sv_set   = sorted(list(set(D1window['sv']).intersection(set(D2window['sv']))))
         epoc_set = sorted(list(set(D1window.index).intersection(set(D2window.index))))
-        
+
         # if special selection of sats, then apply it
         # (it is late and this selection is incredibely complicated ...)
         if np.any([True  if constuse in e else False for e in sv_used_list]):
             # first find the selected sats for the good constellation
             sv_used_select_list = [int(e[1:]) for e in sv_used_list if constuse in e]
-            #and apply it 
+            #and apply it
             sv_set = sorted(list(set(sv_set).intersection(set(sv_used_select_list))))
 
-        for svv in sv_set:         
+        for svv in sv_set:
             # First research : find corresponding epoch for the SV
             # this one is sufficent if there is no gaps (e.g. with 0.00000) i.e.
             # same nb of obs in the 2 files
-            # NB : .reindex() is smart, it fills the DataFrame 
+            # NB : .reindex() is smart, it fills the DataFrame
             # with NaN
             try:
                 D1sv_orig = D1window[D1window['sv'] == svv].reindex(epoc_set)
@@ -4562,9 +4687,9 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
                 print("TIP : Filter the input Dataframe before calling this fct with")
                 print("      DF = DF[DF['AC'] == 'gbm']")
                 raise exce
-                
+
             # Second research, it is a security in case of gap
-            # This step is useless, because .reindex() will fill the DataFrame 
+            # This step is useless, because .reindex() will fill the DataFrame
             # with NaN
             if len(D1sv_orig) != len(D2sv_orig):
                 print("INFO : different epochs nbr for SV",svv,len(D1sv_orig),len(D2sv_orig))
@@ -4573,14 +4698,14 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
                 D2sv = D2sv_orig.loc[epoc_sv_set]
             else:
                 D1sv = D1sv_orig
-                D2sv = D2sv_orig                
-                        
+                D2sv = D2sv_orig
+
             P1     = D1sv[['x','y','z']]
             P2     = D2sv[['x','y','z']]
 
             # Start ECEF => ECI
             if convert_ECEF_ECI:
-                # Backup because the columns xyz will be reaffected 
+                # Backup because the columns xyz will be reaffected
                 D1sv_bkp = D1sv.copy()
                 D2sv_bkp = D2sv.copy()
 
@@ -4593,13 +4718,13 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
                 P1  = D1sv[['x','y','z']]
                 P2  = D2sv[['x','y','z']]
             # End ECEF => ECI
-            
+
             if not RTNoutput:
-                # Compatible with the documentation + 
+                # Compatible with the documentation +
                 # empirically tested with OV software
                 # it is  P1 - P2 (and not P2 - P1)
                 Delta_P = P1 - P2
-                
+
 
                 Diff_sat = Delta_P.copy()
                 Diff_sat.columns = ['dx','dy','dz']
@@ -4632,7 +4757,7 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
                 R_ar[1]
                 Beta = np.stack((R_ar,I_ar,C_ar),axis=1)
 
-                # Compatible with the documentation + 
+                # Compatible with the documentation +
                 # empirically tested with OV software
                 # it is  P1 - P2 (and not P2 - P1)
                 Delta_P = P1 - P2
@@ -4647,7 +4772,7 @@ def compar_orbit(Data_inp_1,Data_inp_2,step_data = 900,
                 Diff_sat = pd.DataFrame(np.vstack(Astk),
                                    index = P1.index,columns=['dr','dt','dn'])
 
-            Diff_sat = Diff_sat * 1000 # metrer conversion 
+            Diff_sat = Diff_sat * 1000 # metrer conversion
 
             Diff_sat['const'] = [constuse] * len(Diff_sat.index)
             Diff_sat['sv']    = [svv]      * len(Diff_sat.index)
@@ -4744,7 +4869,7 @@ def compar_orbit_plot(Diff_sat_all_df_in,
     col_name0 = Diff_sat_all_df_in.frame_col_name1
     col_name1 = Diff_sat_all_df_in.frame_col_name2
     col_name2 = Diff_sat_all_df_in.frame_col_name3
-    
+
     for satuse,color in zip(satdispo,Colors):
         Diffuse = Diff_sat_all_df_in[Diff_sat_all_df_in['sat'] == satuse]
 
@@ -4772,8 +4897,8 @@ def compar_orbit_plot(Diff_sat_all_df_in,
         axr.set_ylabel(Diff_sat_all_df_in.frame_type + ' X diff. (m)')
         axt.set_ylabel(Diff_sat_all_df_in.frame_type + ' Y diff. (m)')
         axn.set_ylabel(Diff_sat_all_df_in.frame_type + ' Z diff. (m)')
-        
-    
+
+
     y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
     axr.yaxis.set_major_formatter(y_formatter)
     axt.yaxis.set_major_formatter(y_formatter)
@@ -4790,19 +4915,19 @@ def compar_orbit_plot(Diff_sat_all_df_in,
     plt.tight_layout()
     plt.subplots_adjust(top=0.95)
     plt.subplots_adjust(bottom=0.15)
-    
+
     if save_plot:
         if save_plot_name == "auto":
             save_plot_name = "_".join((Diff_sat_all_df_in.name1,
                                       Diff_sat_all_df_in.name2,
                                       Diff_sat_all_df_in.index.min().strftime("%Y-%m-%d")))
-            
+
         for ext in save_plot_ext:
             save_plot_path = os.path.join(save_plot_dir,save_plot_name)
             plt.savefig(save_plot_path + ext)
     else:
         save_plot_path = None
-        
+
     return save_plot_path
 
 def compar_orbit_table(Diff_sat_all_df_in,GRGS_style = True,
@@ -4814,18 +4939,18 @@ def compar_orbit_table(Diff_sat_all_df_in,GRGS_style = True,
     ----------
     Diff_sat_all_df_in : Pandas DataFrame
         a DataFrame produced by compar_orbit
-        
+
     GRGS_style : bool
         RMS calc based on the GRGS definition of the RMS (OV help)
-        
+
     light_tab : bool
         produce a table with only RMS, with min/max/arithmetic instead
-                
+
     Returns
     -------
-    Compar_tab_out : DataFrame 
+    Compar_tab_out : DataFrame
         Statistical results of the comparison
-        
+
     Note
     ----
     you can pretty print the output DataFrame using tabular module
@@ -4834,7 +4959,7 @@ def compar_orbit_table(Diff_sat_all_df_in,GRGS_style = True,
     >>> from tabulate import tabulate
     >>> print(tabulate(ComparTable,headers="keys",floatfmt=".4f"))
     """
-    
+
     sat_list = genefun.uniq_and_sort(Diff_sat_all_df_in['sat'])
 
     # Pandas donesn't manage well iterable as attribute
@@ -4842,7 +4967,7 @@ def compar_orbit_table(Diff_sat_all_df_in,GRGS_style = True,
     col_name0 = Diff_sat_all_df_in.frame_col_name1
     col_name1 = Diff_sat_all_df_in.frame_col_name2
     col_name2 = Diff_sat_all_df_in.frame_col_name3
-    
+
     rms_stk = []
 
     for sat in sat_list:
@@ -4945,7 +5070,7 @@ def compar_orbit_frontend(DataDF1,DataDF2,ac1,ac2):
 def compar_sinex(snx1 , snx2 , stat_select = None, invert_select=False,
                  out_means_summary=True,out_meta=True,out_dataframe = True,
                  manu_wwwwd=None):
-    
+
     if type(snx1) is str:
         week1 = genefun.split_improved(os.path.basename(snx1),"_",".")[:]
         week2 = genefun.split_improved(os.path.basename(snx2),"_",".")[:]
@@ -4959,111 +5084,111 @@ def compar_sinex(snx1 , snx2 , stat_select = None, invert_select=False,
         print("WARN : you are giving the SINEX input as a DataFrame, wwwwd has to be given manually using manu_wwwwd")
         D1 = snx1
         D2 = snx2
-    
-    
+
+
     if manu_wwwwd:
         wwwwd = manu_wwwwd
-    
-    
+
+
     STATCommon  = set(D1["STAT"]).intersection(set(D2["STAT"]))
-    
+
     if stat_select:
-        
+
         STATCommon_init = list(STATCommon)
-        
+
         if invert_select:
             select_fct = lambda x : not x
         else:
             select_fct = lambda x : x
-        
+
         if type(stat_select) is str:
-            STATCommon = [sta for sta in STATCommon_init if select_fct(re.search(stat_select, sta)) ] 
+            STATCommon = [sta for sta in STATCommon_init if select_fct(re.search(stat_select, sta)) ]
         elif genefun.is_iterable(stat_select):
-            STATCommon = [sta for sta in STATCommon_init if select_fct(sta in stat_select) ] 
+            STATCommon = [sta for sta in STATCommon_init if select_fct(sta in stat_select) ]
         else:
             print("WARN : check type of stat_select")
-    
+
     D1Common = D1[D1["STAT"].isin(STATCommon)].sort_values("STAT").reset_index(drop=True)
     D2Common = D2[D2["STAT"].isin(STATCommon)].sort_values("STAT").reset_index(drop=True)
-    
-    
+
+
     Ddiff = pd.DataFrame()
     Ddiff = Ddiff.assign(STAT=D1Common["STAT"])
-    
+
     #### XYZ Part
     for xyz in ("x","y","z"):
-        
+
         dif = pd.to_numeric((D2Common[xyz] - D1Common[xyz]))
-        
+
         Ddiff = Ddiff.assign(xyz=dif)
         Ddiff = Ddiff.rename(columns={"xyz": xyz})
-        
+
     D3D = np.sqrt((Ddiff["x"]**2 + Ddiff["y"]**2 + Ddiff["z"]**2 ).astype('float64'))
-    
+
     Ddiff = Ddiff.assign(d3D_xyz=D3D)
-    
+
     ### ENU Part
     E , N ,U = [] , [] , []
     enu_stk = []
-    
+
     for (_,l1) , (_,l2) in zip( D1Common.iterrows() , D2Common.iterrows() ):
         enu   = geok.XYZ2ENU_2(l1["x"],l1["y"],l1["z"],l2["x"],l2["y"],l2["z"])
         enu_stk.append(np.array(enu))
-        
-    
+
+
     if len(enu_stk) == 0:
         E,N,U = np.array([]) , np.array([]) , np.array([])
     else:
         ENU = np.hstack(enu_stk)
         E,N,U = ENU[0,:] , ENU[1,:] , ENU[2,:]
-    
 
-    D2D = np.sqrt((E**2 + N**2).astype('float64'))    
+
+    D2D = np.sqrt((E**2 + N**2).astype('float64'))
     D3D = np.sqrt((E**2 + N**2 + U**2 ).astype('float64'))
-    
+
     Ddiff = Ddiff.assign(e=E)
     Ddiff = Ddiff.assign(n=N)
     Ddiff = Ddiff.assign(u=U)
     Ddiff = Ddiff.assign(d2D_enu=D2D)
     Ddiff = Ddiff.assign(d3D_enu=D3D)
-        
+
     #    E,N,U    = geok.XYZ2ENU_2((X,Y,Z,x0,y0,z0))
     #    E,N,U    = geok.XYZ2ENU_2((X,Y,Z,x0,y0,z0))
-        
+
     if out_dataframe:
         out_meta = True
-    
-    
+
+
     if not out_means_summary:
         print("INFO : this is not used operationally and it can be improved")
         return Ddiff
     else:
         output = []
-        
+
         col_names = ("x","y","z","d3D_xyz",
                      "e","n","u","d2D_enu","d3D_enu")
-        
+
         for xyz in col_names:
             output.append(geok.rms_mean(Ddiff[xyz]))
         for xyz in col_names:
             output.append(np.nanmean(Ddiff[xyz]))
         for xyz in col_names:
             output.append(np.nanstd(Ddiff[xyz]))
-        
+
         if out_meta:
             print(wwwwd)
             nstat = len(STATCommon)
             week   = int(wwwwd[:4])
-            day    = int(wwwwd[4:]) 
+            day    = int(wwwwd[4:])
             output = [week , day ,nstat] + output
-            
-        
+
+
         if not out_dataframe:
             return tuple(output)
         else:
-            
+
             output_DF = pd.DataFrame(output).transpose()
-                        
+
             output_DF.columns = ["week","dow","nbstat",
              "x_rms","y_rms","z_rms","d3D_xyz_rms",
              "e_rms","n_rms","u_rms","d2D_enu_rms","d3D_enu_rms",
@@ -5071,7 +5196,7 @@ def compar_sinex(snx1 , snx2 , stat_select = None, invert_select=False,
              "e_ari","n_ari","u_ari","d2D_enu_ari","d3D_enu_ari",
              "x_ari","y_std","z_std","d3D_xyz_std",
              "e_ari","n_std","u_std","d2D_enu_std","d3D_enu_std"]
-            
+
             return output_DF
 
 
@@ -5206,7 +5331,7 @@ def stations_in_sinex_mono(sinex_path):
     return epoch , stats_list
 
 
-####################### Compare troposphere delay  ####################################################    
+####################### Compare troposphere delay  ####################################################
 def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=False,mode="DF",mode_coor="sinex",coord_t="static"):
     """
     Calculate differences of tropospheric delay and gradients between selected stations (Atmospheric ties)
@@ -5224,8 +5349,8 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
          trop_diff : difference of tropospheric delay and gradients between selected stations (Atmospheric ties)
                      and uncertainty of atmospheric ties and gradients ties
     """
-    
-    if mode == "SINEX":    
+
+    if mode == "SINEX":
         trop_pd = gfc.read_snx_trop(input_file)
     elif mode == "DF":
         trop_pd = input_file
@@ -5233,10 +5358,10 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
         import sys
         print("No this option for troposphere solution")
         sys.exit()
-        
+
     trop_ref = trop_pd[trop_pd.STAT == STA1]
     trop_rov = trop_pd[trop_pd.STAT == STA2]
-    
+
     if trop_ref.empty:
         print("No solution for "+STA1+" Reference station")
         return None,None
@@ -5244,32 +5369,32 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
     if trop_rov.empty:
         print("No solution for "+STA2+" Rover station")
         return None,None
-    
+
     diff_pd = pd.merge(trop_ref,trop_rov,how='outer',on='epoc')
     diff_pd = diff_pd.dropna()
     # Tropospheric ties
     diff_pd['Trop_ties'] = diff_pd['tro_x'] - diff_pd['tro_y']
     diff_pd['STrop_ties'] = np.nan # add blank column before input values
     diff_pd['STrop_ties'] = diff_pd.apply(lambda x: np.round(np.sqrt(x.stro_x**2 + x.stro_y**2),2),axis=1)
-    
+
     # North gradients ties
     diff_pd['Ngra_ties'] = diff_pd['tgn_x'] - diff_pd['tgn_y']
     diff_pd['SNgra_ties'] = np.nan # add blank column before input values
     diff_pd['SNgra_ties'] = diff_pd.apply(lambda x: np.round(np.sqrt(x.stgn_x**2 + x.stgn_y**2),2),axis=1)
-    
+
     # East gradients ties
     diff_pd['Egra_ties'] = diff_pd['tge_x'] - diff_pd['tge_y']
     diff_pd['SEgra_ties'] = np.nan # add blank column before input values
     diff_pd['SEgra_ties'] = diff_pd.apply(lambda x: np.round(np.sqrt(x.stge_x**2 + x.stge_y**2),2),axis=1)
-    
+
      # Apply height corrections from Standard ties
     if apply_ties == True:
-        
+
         if isinstance(grid_met,str):
             import sys
             print("Please read grid file before use this function")
             sys.exit()
-        
+
         if mode_coor == "epos" and coord_t == "static":
             coord = read_epos_sta_coords_mono(coord_file)
             # Extract coordinates Ref station in Lat. Lon. height
@@ -5278,19 +5403,19 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
             # Extract coordinates Rov station in Lat. Lon. height
             coord_rov = coord[coord.site==STA2]
             lat_rov , lon_rov , h_rov = geok.XYZ2GEO(coord_rov.x,coord_rov.y,coord_rov.z,False)
-           
+
             #Merge coordinates results
             coord_res = pd.merge(coord_ref,coord_rov,how='outer',on='MJD_ref')
             coord_res['lat_ref'] , coord_res['lon_ref'] , coord_res['h_ref'] = float(lat_ref) , float(lon_ref) , float(h_ref)
             coord_res['lat_rov'] , coord_res['lon_rov'] , coord_res['h_rov'] = float(lat_rov) , float(lon_rov) , float(h_rov)
-            
+
             #drop unnecessary column
             coord_res = coord_res.drop([ 'site_num_x', 'tecto_plate_x', 'MJD_start_x',
                                         'MJD_end_x', 'Vx_x',
                                         'Vy_x', 'Vz_x', 'sVx_x', 'sVy_x', 'sVz_x', 'site_num_y',
                                         'tecto_plate_y', 'MJD_start_y', 'MJD_end_y', 'Vx_y', 'Vy_y', 'Vz_y', 'sVx_y', 'sVy_y',
                                         'sVz_y'],axis=1)
-            
+
         elif mode_coor == "sinex" and coord_t == "static":
             coord = gfc.read_sinex(coord_file,True)
              # Extract coordinates Ref station in Lat. Lon. height
@@ -5299,17 +5424,17 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
             # Extract coordinates Rov station in Lat. Lon. height
             coord_rov = coord[coord.STAT==STA2]
             lat_rov , lon_rov , h_rov = geok.XYZ2GEO(coord_rov.x,coord_rov.y,coord_rov.z,False)
-            
+
             #Merge coordinates results
             coord_res = pd.merge(coord_ref,coord_rov,how='outer',on='epoc')
             coord_res['lat_ref'] , coord_res['lon_ref'] , coord_res['h_ref'] = float(lat_ref) , float(lon_ref) , float(h_ref)
             coord_res['lat_rov'] , coord_res['lon_rov'] , coord_res['h_rov'] = float(lat_rov) , float(lon_rov) , float(h_rov)
-            
+
              #drop unnecessary columns
             coord_res = coord_res.drop(['AC_x', 'soln_x', 'vx_x', 'vy_x', 'vz_x', 'svx_x', 'svy_x', 'svz_x', 'start_x',
                                        'end_x', 'AC_y', 'soln_y', 'vx_y', 'vy_y', 'vz_y', 'svx_y', 'svy_y', 'svz_y',
                                        'start_y', 'end_y'],axis=1)
-            
+
         elif mode_coor == "epos" and coord_t == "kinematic":
             coord = read_epos_sta_kinematics(coord_file)
             # Extract coordinates Ref station in Lat. Lon. height
@@ -5319,7 +5444,7 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
             y_ref_new = f_y_ref(geok.dt2MJD(diff_pd.epoc))
             z_ref_new = f_z_ref(geok.dt2MJD(diff_pd.epoc))
             lat_ref , lon_ref , h_ref = geok.XYZ2GEO(x_ref_new,y_ref_new,z_ref_new,False)
-            
+
             # Extract coordinates Rov station in Lat. Lon. height
             coord_rov = coord[coord.site==STA2.lower()]
             f_x_rov , f_y_rov , f_z_rov = interpolator_with_extrapolated(coord_rov.MJD_epo,coord_rov.x,coord_rov.y,coord_rov.z)
@@ -5327,10 +5452,10 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
             y_rov_new = f_y_rov(geok.dt2MJD(diff_pd.epoc))
             z_rov_new = f_z_rov(geok.dt2MJD(diff_pd.epoc))
             lat_rov , lon_rov , h_rov = geok.XYZ2GEO(x_rov_new,y_rov_new,z_rov_new,False)
-            
+
             diff_pd['lat_ref'] , diff_pd['lon_ref'] , diff_pd['h_ref'] = lat_ref , lon_ref , h_ref
             diff_pd['lat_rov'] , diff_pd['lon_rov'] , diff_pd['h_rov'] = lat_rov , lon_rov , h_rov
-           
+
             #Merge coordinates results
             coord_res = diff_pd[['STAT_x','STAT_y','epoc','lat_ref','lon_ref','h_ref','lat_rov','lon_rov','h_rov']].copy()
             coord_res = coord_res.rename(index=str,columns={"STAT_x":"STAT_ref","STAT_y":"STAT_rov"})
@@ -5339,22 +5464,22 @@ def compare_trop_ties(input_file,STA1,STA2,coord_file="",grid_met="",apply_ties=
             print("No this option for coordinates")
             sys.exit()
         #Extract standard ties
-        
+
         grid = grid_met
         if coord_t == "kinematic":
             diff_pd['stand_ties'] = diff_pd.apply(lambda x: gtro.calc_stand_ties(x['epoc'], x.lat_ref , x.lon_ref , x.h_ref,x.lat_rov , x.lon_rov , x.h_rov,grid),axis=1)
         elif coord_t == "static":
             diff_pd['stand_ties'] = diff_pd.apply(lambda x: gtro.calc_stand_ties(x['epoc'], float(lat_ref) , float(lon_ref) , float(h_ref) , float(lat_rov) , float(lon_rov) , float(h_rov),grid),axis=1)
-        
-       
+
+
         diff_pd['Trop_ties_corr'] = diff_pd.apply(lambda x: x['tro_x'] - (x['tro_y']+x['stand_ties']),axis=1)
-        
+
     #drop unnecessary column
     if coord_t == "kinematic":
         diff_pd = diff_pd.drop(['tro_x', 'stro_x', 'tgn_x', 'stgn_x', 'tge_x', 'stge_x','tro_y', 'stro_y', 'tgn_y', 'stgn_y', 'tge_y','stge_y','lat_ref','lon_ref','h_ref','lat_rov','lon_rov','h_rov'],axis=1)
     else:
         diff_pd = diff_pd.drop(['tro_x', 'stro_x', 'tgn_x', 'stgn_x', 'tge_x', 'stge_x','tro_y', 'stro_y', 'tgn_y', 'stgn_y', 'tge_y','stge_y'],axis=1)
-    
+
     #Change column name of station
     diff_pd = diff_pd.rename(index=str,columns={"STAT_x":"STAT_ref","STAT_y":"STAT_rov"})
 
@@ -5365,7 +5490,7 @@ def stat_summary_trop_ties(df):
     wmean_wt_ties = np.round(np.average(df.Trop_ties_corr,weights = 1/df.STrop_ties),3)
     rms_mean_no_ties = np.round(geok.rms_mean(df.Trop_ties),3)
     rms_mean_wt_ties = np.round(geok.rms_mean(df.Trop_ties_corr),3)
-    
+
     return [wmean_no_ties,wmean_wt_ties,rms_mean_no_ties,rms_mean_wt_ties]
 
 def plot_trop_ties(df,ref_sta,rov_sta,analy_coor=False,analy_num_obs=False,df_coord="",savePlot=False,filePath="",fileName=""):
@@ -5385,7 +5510,7 @@ def plot_trop_ties(df,ref_sta,rov_sta,analy_coor=False,analy_num_obs=False,df_co
     epo_plt = geok.dt2year_decimal(df.epoc)
     h_diff = df_coord.h_ref - df_coord.h_rov
     if analy_coor:
-        
+
         fig, ax = plt.subplots(3,1,sharex=True)
         axA = ax[0]
         axB = ax[1]
@@ -5400,7 +5525,7 @@ def plot_trop_ties(df,ref_sta,rov_sta,analy_coor=False,analy_num_obs=False,df_co
         axA.set_ylabel("Trop. ties (mm)")
         axA.set_xlabel("Time")
         axA.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
-        
+
         axB.plot(epo_plt,h_diff,marker="P",linestyle="--",label="Height difference")
         axB.plot(np.unique(epo_plt), np.poly1d(np.polyfit(epo_plt, h_diff, 1))(np.unique(epo_plt)),label="Height diff. fitline")
         axB.grid()
@@ -5434,7 +5559,7 @@ def plot_trop_ties(df,ref_sta,rov_sta,analy_coor=False,analy_num_obs=False,df_co
         axA.set_ylabel("Trop. ties (mm)")
         axA.set_xlabel("Time")
         axA.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
-        
+
         if analy_num_obs:
             if len(epo_plt) != len(df.num_obs_ref):
                 print("No plot number of observations")
@@ -5447,17 +5572,17 @@ def plot_trop_ties(df,ref_sta,rov_sta,analy_coor=False,analy_num_obs=False,df_co
                 axC.set_ylabel("Num Obs.")
                 axC.set_xlabel("Time")
                 axC.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
-    
+
     plt.tight_layout()
     plt.suptitle("Total delay ties of " + ref_sta + "-" + rov_sta)
     if savePlot:
         export_ts_figure_pdf(fig,filePath,fileName,True)
-    
+
     plt.show()
-    
-    return None       
-        
-##########################################################################################    
+
+    return None
+
+##########################################################################################
 
 #def stations_in_sinex_multi(sinex_path_list):
 #    """
@@ -5508,8 +5633,8 @@ def stations_in_coords_file_multi(files_path_list,files_type = "sinex"):
     else:
         print("ERR : check station file type !!")
         return None
-    
-    epoch_list_stk , stats_list_stk = [] , [] 
+
+    epoch_list_stk , stats_list_stk = [] , []
 
     for file_path in files_path_list:
         try:
@@ -6218,7 +6343,7 @@ def mad_cleaner(tsin,seuil=3.5,method='dist',coortype='ABC',
         tsout = bool_cleaner(tswork,bb)
     else:
         tsout = bool_cleaner(tsin,bb)
-        
+
     if verbose:
         killratio = np.round(float(tsout.nbpts) / float(tsin.nbpts),4)
 
@@ -6242,12 +6367,12 @@ def sigma_cleaner(tsin,seuil=3,coortype='ABC',cleantype='any', verbose=False):
     elif cleantype == 'all':
         boolbad = bbsA + bbsB + bbsC
     tsout = bool_cleaner(tsin,boolbad)
-    
+
     if verbose:
         killratio = np.round(float(tsout.nbpts) / float(tsin.nbpts),4)
 
         print("INFO : sigma_cleaner :" , tsin.stat , "clean ratio" , tsin.nbpts , tsout.nbpts , killratio)
-    
+
     return tsout
 
 def std_dev_cleaner(tsin,stddev_threshold,coortype="ABC",cleantype="any",
@@ -6256,7 +6381,7 @@ def std_dev_cleaner(tsin,stddev_threshold,coortype="ABC",cleantype="any",
     A rebooted (1807) version of sigma_cleaner
     just remove values in a timeserie with a high sigma/std deviation
     """
-    
+
     if coortype == 'ABC':
         coortype = tsin.initype()
 
@@ -6271,12 +6396,12 @@ def std_dev_cleaner(tsin,stddev_threshold,coortype="ABC",cleantype="any",
     elif cleantype == 'all':
         boolbad = bbsA + bbsB + bbsC
     tsout = bool_cleaner(tsin,boolbad)
-    
+
     if verbose:
         killratio = np.round(float(tsout.nbpts) / float(tsin.nbpts),4)
 
         print("INFO : std_dev_cleaner :" , tsin.stat , "clean ratio" , tsin.nbpts , tsout.nbpts , killratio)
-    
+
     return tsout
 
 def bool_cleaner(tsin,boollist, verbose=False):
@@ -6297,7 +6422,7 @@ def bool_cleaner(tsin,boollist, verbose=False):
         killratio = np.round(float(tsout.nbpts) / float(tsin.nbpts),4)
 
         print("INFO : bool_cleaner :" , tsin.stat , "clean ratio" , tsin.nbpts , tsout.nbpts , killratio)
-    
+
     return tsout
 
 def linear_regress_find_coeff(tsin,coortype='ENU'):
@@ -6449,7 +6574,7 @@ def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
             f.savefig(export_file,
                       papertype='a4',format=typ)
         print("INFO : plot exported in " , export_file)
-        if close_fig_after_export:            
+        if close_fig_after_export:
             plt.close(f)
     return None
 
@@ -6457,12 +6582,12 @@ def export_ts_plot(tsin,export_path,coortype='ENU',export_type=("pdf","png"),
 def export_ts(ts,outdir,coordtype = 'ENU',outprefix='',write_header=False):
     """
     export the timeserie
-    
+
     write_header not well implemented !!!
     """
-    
+
     proto_str = '{:23} {:23} {:23} {:23} {:23} {:23} {:23} {} {:23} {:23} {}'
-    
+
     A,B,C,T,sA,sB,sC = ts.to_list(coordtype)
     if outprefix != '':
         outprefix = outprefix + '_'
@@ -6471,7 +6596,7 @@ def export_ts(ts,outdir,coordtype = 'ENU',outprefix='',write_header=False):
     outpath = os.path.join(outdir,outfilenam)
 
     filobj = open(outpath,'w+')
-    
+
     if write_header:
         "#" + proto_str.format(("year","month","day","hour","minute","seconds","year_decimal","posix_time"))
         filobj.write()
@@ -6483,10 +6608,10 @@ def export_ts(ts,outdir,coordtype = 'ENU',outprefix='',write_header=False):
 
         yr_dec_str = str(geok.dt2year_decimal(tt))
         posix_str = str(t)
-        
+
         paramstr2 = paramstr + [tt.strftime("%Y %m %d %H %M %S"),yr_dec_str,posix_str ,'\n']
-        
-        
+
+
         outlin =  proto_str.format(*paramstr2)
         filobj.write(outlin)
     filobj.close()
@@ -6565,16 +6690,16 @@ def export_ts_as_hector_enu(tsin,outdir,outprefix,coordtype = 'ENU'):
     """
     export to a HECTOR .enu (and not .neu !) compatible format
     This format is simpler : just gives MJD E N U
-    
+
     This format is necessary to force a sampling period.
-    
+
     outfile will be writed in
     /outdir/outprefixSTAT.enu
     """
-    
+
     print("NOT IMPLEMENTED YET !")
-    
-    
+
+
     return None
 
 
@@ -6586,10 +6711,10 @@ def export_ts_as_midas_tenu(tsin,outdir,outprefix,coordtype = 'ENU',
 
     outfile will be writed in
     /outdir/outprefixSTAT.tneu
-    
+
     if export_step == True:
-    export a step file as 
-    /outdir/outprefixSTAT.step        
+    export a step file as
+    /outdir/outprefixSTAT.step
     """
     if not hasattr(tsin[0],'X'):
         print('WARN : export_ts_as_midas_tneu : no XYZ in ts')
@@ -6613,7 +6738,7 @@ def export_ts_as_midas_tenu(tsin,outdir,outprefix,coordtype = 'ENU',
         first_pt.L = 0.
         first_pt.H = 0.
         first_pt.F = 0.
-        
+
     e0,n0,u0,t0 = list(zip(E,N,U,T))[0]
 
     for e,n,u,t in zip(E,N,U,T):
@@ -6622,15 +6747,15 @@ def export_ts_as_midas_tenu(tsin,outdir,outprefix,coordtype = 'ENU',
         outfile.write('{} {:.5f} {:+.6f} {:+.6f} {:+.6f} \n'.format(stat,t,e-e0,n-n0,u-u0))
 
     print('INFO : timeserie exported in ' + outpath)
-    
+
     if export_step and tswork.bool_discont:
         outpath_step = outdir +'/' + outprefix + tswork.stat + '.step'
         outfile_step = open(outpath_step,'w+')
         for d in tswork.discont:
             d = geok.toYearFraction(d)
             line = tswork.stat + " " + str(d) + "\n"
-            outfile_step.write(line)    
-            
+            outfile_step.write(line)
+
             print('INFO : timeserie discont. (steps) exported in ' + outpath_step)
 
     return None
@@ -7018,93 +7143,93 @@ def interpolator_with_extrapolated(T,X,Y,Z):
 
 
 
-#  _____       _                      _   _             _____  _       _    
-# |_   _|     | |                    | | (_)           |  __ \| |     | |   
-#   | |  _ __ | |_ ___ _ __ __ _  ___| |_ ___   _____  | |__) | | ___ | |_  
-#   | | | '_ \| __/ _ \ '__/ _` |/ __| __| \ \ / / _ \ |  ___/| |/ _ \| __| 
-#  _| |_| | | | ||  __/ | | (_| | (__| |_| |\ V /  __/ | |    | | (_) | |_  
-# |_____|_| |_|\__\___|_|  \__,_|\___|\__|_|_\_/ \___| |_|    |_|\___/ \__| 
-# |  __ \    (_)     | |     ___     / ____| (_)    | |                     
-# | |__) |__  _ _ __ | |_   ( _ )   | |    | |_  ___| | __                  
-# |  ___/ _ \| | '_ \| __|  / _ \/\ | |    | | |/ __| |/ /                  
-# | |  | (_) | | | | | |_  | (_>  < | |____| | | (__|   <                   
-# |_|   \___/|_|_| |_|\__|  \___/\/  \_____|_|_|\___|_|\_\  
+#  _____       _                      _   _             _____  _       _
+# |_   _|     | |                    | | (_)           |  __ \| |     | |
+#   | |  _ __ | |_ ___ _ __ __ _  ___| |_ ___   _____  | |__) | | ___ | |_
+#   | | | '_ \| __/ _ \ '__/ _` |/ __| __| \ \ / / _ \ |  ___/| |/ _ \| __|
+#  _| |_| | | | ||  __/ | | (_| | (__| |_| |\ V /  __/ | |    | | (_) | |_
+# |_____|_| |_|\__\___|_|  \__,_|\___|\__|_|_\_/ \___| |_|    |_|\___/ \__|
+# |  __ \    (_)     | |     ___     / ____| (_)    | |
+# | |__) |__  _ _ __ | |_   ( _ )   | |    | |_  ___| | __
+# |  ___/ _ \| | '_ \| __|  / _ \/\ | |    | | |/ __| |/ /
+# | |  | (_) | | | | | |_  | (_>  < | |____| | | (__|   <
+# |_|   \___/|_|_| |_|\__|  \___/\/  \_____|_|_|\___|_|\_\
 
 
 class point_n_click_plot():
     """
     USAGE :
         Data have to be ploted already in a figure
-        
+
         Then :
-        
+
             PnC = point_n_click_plot()
-            
+
             multi , cid = PnC(fig=6)
-        
+
             PnC.selectedX
 
         i.e. :
-            
+
             Create an object point_n_click_plot (here it is PnC in the exemple below)
-            
+
             Call the object like a function with the id of the plot figure
-            
+
             Make your selection using SPACE key
-            
+
             Get your results in a list called PnC.selectedX
-            
-            
+
+
     IMPORTANT : cursor objects (i.e. multi & cid)
-                must be stored as global variables when you call the method 
+                must be stored as global variables when you call the method
                 like this :
-                    
-                    multi , cid = PnC(fig=1)            
+
+                    multi , cid = PnC(fig=1)
 
     """
-    
-    
+
+
     def __init__(self):
         self.selectedX = []
         self.ver_bar_stk = []
 
-    
+
     def __call__(self,fig=1,Xdata_are_time=True):
-        """        
+        """
         IMPORTANT : cursor objects (i.e. multi & cid)
-                    must be stored as global variables when you call the method 
+                    must be stored as global variables when you call the method
                     like this :
                     multi , cid = PnC(fig=1)
         """
-        
+
         if type(fig) is int:
             figobj = plt.figure(fig)
         elif type(fig) is matplotlib.figure.Figure:
             figobj = fig
-                
+
         print("INFO : press SPACE to record a X-value, \n       press R to Remove the previously recorded one")
-    
-        
+
+
         def onclick_discont(event):
-                        
+
             if event.key == ' ':
                 if Xdata_are_time:
                     ix, iy = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None),event.ydata
                 else:
                     ix, iy = event.xdata , event.ydata
-                    
+
                 print("INFO : X value recorded : " , ix)
 
                 for ax in figobj.axes:
                     out_bar_list = geok.plot_vertical_bar_ax([ix],ax,"b",
                                                              linewidth=1)
-                    
+
                 self.ver_bar_stk.append(out_bar_list[0])
-                
-                self.selectedX.append(ix)      
-        
+
+                self.selectedX.append(ix)
+
                 plt.draw()
-                
+
             elif event.key == 'r' and len(self.selectedX) > 0:
                 last = self.selectedX[-1]
 
@@ -7117,10 +7242,10 @@ class point_n_click_plot():
                 print("INFO : value removed : " , last )
 
                 plt.draw()
-            
+
             return None
-        
+
         multi = MultiCursor(figobj.canvas, figobj.axes , color='k', lw=1)
         cid   = figobj.canvas.mpl_connect('key_press_event', onclick_discont)
-        
+
         return multi , cid

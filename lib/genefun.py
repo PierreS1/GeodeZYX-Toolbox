@@ -1202,7 +1202,7 @@ def extract_text_between_elements_2(file_path , elt_start , elt_end,
     """
     
     try:
-        F = open(file_path,"r")
+        F = open(file_path,"r",encoding = "ISO-8859-1")
     except:
         F = file_path
     
@@ -1252,7 +1252,8 @@ def str_2_float_line(line , sep=" ",out_type=float):
 ### WRAPPER OF I/O FCTs
 ########################
 
-def pickle_saver(datain , outdir = None , outname = None , ext='.pik' , timestamp = False,full_path=None):
+def pickle_saver(datain , outdir = None , outname = None , ext='.pik' ,
+                 timestamp = False,full_path=None):
     """
     if full_path is given, override outdir and outname
     RETURN :

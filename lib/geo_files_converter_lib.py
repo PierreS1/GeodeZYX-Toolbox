@@ -2005,7 +2005,7 @@ def sinex_DataFrame(read_sinex_result):
 
 def read_sinex_versatile(sinex_path_in , id_block,
                          convert_date_2_dt = True,
-                         use_last_header_line = True):
+                         header_line_idx = -1):
     """
     Read a block from a SINEX and return the data as a DataFrame
 
@@ -2020,9 +2020,11 @@ def read_sinex_versatile(sinex_path_in , id_block,
     convert_date_2_dt : bool
         Try to convert a SINEX formated date as a python datetime
         
-    use_last_header_line : bool
-        If the block header contains several lines, the last one will be used 
-        as column names (If False, the first line is used)
+    header_line_idx : int
+        If the block header contains several lines, use this line index
+        Per default, the last (-1)
+        For the first line, use 0
+        
                 
     Returns
     -------
@@ -2056,27 +2058,31 @@ def read_sinex_versatile(sinex_path_in , id_block,
                             
     if len(Lines_list_header) > 0:
         ### define the header
-        if use_last_header_line:
-            header_line = Lines_list_header[-1]
-        else:   
-            header_line = Lines_list_header[0]
+        header_line = Lines_list_header[header_line_idx]
+        
 
         Header_split = header_line.split()
         Fields_size = [len(e)+1 for e in Header_split]
+
+        print(header_line , Fields_size)
+
+
+
     
         ### Read the file
-        DF = pandas.read_fwf(StringIO(Lines_str),width=Fields_size)
+        DF = pandas.read_fwf(StringIO(Lines_str),widths=Fields_size)
+        DF.set_axis(Header_split, axis=1, inplace=True)
         
         ### Rename the 1st column (remove the comment marker)
         DF.rename(columns={DF.columns[0]:DF.columns[0][1:]}, inplace=True)
 
     else: # no header in the SINEX
-        DF = pandas.read_csv(StringIO(Lines_str),header=-1 , delim_whitespace=True)
-        DF = pandas.read_csv(StringIO(Lines_str),header=-1 , delim_whitespace=True)
+        DF = pandas.read_csv(StringIO(Lines_str),header=-1 ,
+                             delim_whitespace=True)
 
-    
     for col in DF.columns:
-        if convert_date_2_dt and re.match("[0-9]{2}:[0-9]{3}:[0-9]{5}",str(DF[col][0])):
+        if convert_date_2_dt and re.match("([0-9]{2}|[0-9]{4}):[0-9]{3}:[0-9]{5}",
+                                          str(DF[col][0])):
             try:
                 DF[col] = DF[col].apply(lambda x : geok.datestr_sinex_2_dt(x))
             except:
